@@ -1,0 +1,42 @@
+# Shared node settings. Each node file sets: site, node, and pins via substitutions.
+esphome:
+  name: ${node}
+  comment: "Agria ${site}/${node}"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # Falls back to a local AP for re-provisioning if the site WiFi is down.
+  ap:
+    ssid: "${node}-setup"
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# MQTT only (no Home Assistant API). Topics come out as
+#   agria/<site>/<node>/sensor/<id>/state, with LWT at agria/<site>/<node>/status
+mqtt:
+  broker: !secret mqtt_broker
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: agria/${site}/${node}
+  discovery: false
+  # Default birth/will messages ("online"/"offline" on <prefix>/status) are what the gateway watches.
+
+# Signal strength is tracked by the gateway; a metal container shell blocks
+# WiFi, so put an access point inside the container.
+sensor:
+  - platform: wifi_signal
+    name: wifi_rssi
+    update_interval: 60s

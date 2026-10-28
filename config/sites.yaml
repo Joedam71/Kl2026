@@ -1,0 +1,90 @@
+# Agria site configuration.
+#
+# Sensor ids must match the ESPHome sensor names (firmware/esphome). Each
+# sensor's `kind` supplies default units, plausible range, alert thresholds,
+# stale timeout and calibration interval (see agria/config.py, KINDS).
+# Override any of them per sensor. Defaults assume leafy greens/herbs in
+# hydroponics; tune thresholds to the crop actually being grown.
+
+sites:
+  - id: greenhouse-1
+    name: Greenhouse 1
+    type: greenhouse
+    timezone: America/New_York
+    nodes:
+      - id: gh1-climate
+        description: Canopy climate node (aspirated radiation shield, canopy height)
+        sensors:
+          - {id: air_temp, kind: air_temperature, name: Air temperature}
+          - {id: rh, kind: relative_humidity, name: Relative humidity}
+          - {id: co2, kind: co2, name: CO2}
+          - {id: ppfd, kind: ppfd, name: Light (PPFD)}
+          - {id: wifi_rssi, kind: wifi_rssi, name: Climate node WiFi}
+      - id: gh1-nutrient
+        description: Reservoir / nutrient node
+        sensors:
+          - {id: water_temp, kind: water_temperature, name: Water temperature}
+          - {id: ph, kind: ph, name: pH}
+          - {id: ec, kind: ec, name: EC}
+          - {id: do, kind: dissolved_oxygen, name: Dissolved oxygen}
+          - {id: tank_level, kind: tank_level, name: Reservoir level}
+          - {id: tank_low, kind: level_switch, name: Reservoir low float}
+          - {id: wifi_rssi, kind: wifi_rssi, name: Nutrient node WiFi}
+    derived:
+      - id: vpd
+        kind: vpd
+        name: VPD
+        inputs: {temperature: gh1-climate/air_temp, humidity: gh1-climate/rh}
+      - id: dli
+        kind: dli
+        name: Daily light integral
+        inputs: {ppfd: gh1-climate/ppfd}
+    cameras: []
+    # cameras:
+    #   - id: bench-a
+    #     name: Bench A overhead
+    #     snapshot_url: http://192.168.50.31/snapshot.jpg
+    #     interval_s: 900
+
+  - id: container-1
+    name: Container 1
+    type: container
+    timezone: America/New_York
+    nodes:
+      - id: c1-climate
+        description: Canopy climate node
+        sensors:
+          - {id: air_temp, kind: air_temperature, name: Air temperature}
+          - {id: rh, kind: relative_humidity, name: Relative humidity}
+          - {id: co2, kind: co2, name: CO2}
+          - {id: ppfd, kind: ppfd, name: Light (PPFD)}
+          - {id: wifi_rssi, kind: wifi_rssi, name: Climate node WiFi}
+      - id: c1-nutrient
+        description: Reservoir / nutrient node
+        sensors:
+          - {id: water_temp, kind: water_temperature, name: Water temperature}
+          - {id: ph, kind: ph, name: pH}
+          - {id: ec, kind: ec, name: EC}
+          - {id: do, kind: dissolved_oxygen, name: Dissolved oxygen}
+          - {id: tank_level, kind: tank_level, name: Reservoir level}
+          - {id: tank_low, kind: level_switch, name: Reservoir low float}
+          - {id: wifi_rssi, kind: wifi_rssi, name: Nutrient node WiFi}
+    derived:
+      - id: vpd
+        kind: vpd
+        name: VPD
+        inputs: {temperature: c1-climate/air_temp, humidity: c1-climate/rh}
+      - id: dli
+        kind: dli
+        name: Daily light integral
+        inputs: {ppfd: c1-climate/ppfd}
+    cameras: []
+
+notify:
+  # Free phone push: install the ntfy app, subscribe to a hard-to-guess topic.
+  # ntfy_url: https://ntfy.sh/agria-CHANGE-ME-to-something-random
+  # webhook_url: https://example.com/hooks/agria
+  min_severity: warn
+
+retention:
+  raw_days: 90

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agria"
+version = "0.1.0"
+description = "Agria site gateway: sensor monitoring, alerting and camera capture for greenhouses and containers"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "paho-mqtt>=2.0",
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+agria = "agria.main:run"
+agria-sim = "agria.simulator:main"
+
+[tool.setuptools.packages.find]
+include = ["agria*"]
+
+[tool.setuptools.package-data]
+agria = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

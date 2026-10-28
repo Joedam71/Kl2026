@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agria Gateway</title>
+<style>
+:root {
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --series: #2a78d6; --band: rgba(42,120,214,0.08);
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --on-warning: #0b0b0b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --series: #3987e5; --band: rgba(57,135,229,0.12);
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface); position: sticky; top: 0; z-index: 2; flex-wrap: wrap; }
+header h1 { font-size: 17px; margin: 0; font-weight: 650; }
+header .meta { color: var(--ink-2); font-size: 13px; margin-left: auto; }
+main { max-width: 1280px; margin: 0 auto; padding: 16px; }
+h2 { font-size: 15px; margin: 24px 0 10px; font-weight: 650; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+h2 small { color: var(--ink-2); font-weight: 400; font-size: 13px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+  cursor: pointer; display: flex; flex-direction: column; gap: 4px; min-width: 0; text-align: left; color: inherit; font: inherit; }
+.tile:hover { border-color: var(--axis); }
+.tile:focus-visible { outline: 2px solid var(--series); outline-offset: 2px; }
+.tile .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.tile .name { color: var(--ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .value { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.tile .value small { font-size: 13px; color: var(--ink-2); font-weight: 400; margin-left: 3px; }
+.tile .foot { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; gap: 6px; }
+.tile svg { width: 100%; height: 44px; display: block; }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 2px 7px;
+  border-radius: 999px; white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.ok { color: var(--ink-2); } .chip.ok::before { background: var(--good); }
+.chip.warn { background: var(--warning); color: var(--on-warning); } .chip.warn::before { background: var(--on-warning); }
+.chip.alarm { background: var(--critical); color: #fff; } .chip.alarm::before { background: #fff; }
+.chip.nodata { color: var(--muted); } .chip.nodata::before { background: var(--muted); }
+.alerts { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.alert { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.alert:first-child { border-top: 0; }
+.alert .msg { flex: 1 1 260px; min-width: 0; }
+.alert .when { color: var(--muted); font-size: 12px; }
+.empty { padding: 12px; color: var(--ink-2); }
+button.btn { font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--axis);
+  background: transparent; color: var(--ink); cursor: pointer; }
+button.btn:hover { background: var(--band); }
+button.btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.nodes { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.cams { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 10px; }
+.cams figure { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.cams img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: cover; background: var(--grid); }
+.cams figcaption { padding: 6px 10px; font-size: 12.5px; color: var(--ink-2); }
+dialog { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink);
+  width: min(900px, calc(100vw - 32px)); padding: 16px; }
+dialog::backdrop { background: rgba(0,0,0,0.35); }
+.dhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.dhead h3 { margin: 0; font-size: 16px; }
+.ranges { display: flex; gap: 6px; }
+.chartwrap { position: relative; margin-top: 12px; }
+.chartwrap svg { width: 100%; height: 280px; display: block; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); white-space: nowrap; display: none; }
+.tip b { font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 14px; color: var(--ink-2); font-size: 12px; margin-top: 6px; flex-wrap: wrap; }
+.legend span::before { content: ""; display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--series);
+  vertical-align: middle; margin-right: 5px; }
+.legend .lb::before { border: 0; height: 10px; background: var(--band); }
+.legend .ll::before { border-top: 1px dashed var(--muted); }
+.cal { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: var(--ink-2); }
+.err { color: var(--critical); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Agria · Site gateway</h1>
+  <span id="conn" class="chip nodata">connecting</span>
+  <span class="meta" id="updated"></span>
+</header>
+<main>
+  <h2>Active alerts <small id="alertcount"></small></h2>
+  <div class="alerts" id="alerts"><div class="empty">Loading…</div></div>
+  <div id="sites"></div>
+</main>
+
+<dialog id="detail" aria-labelledby="dtitle">
+  <div class="dhead">
+    <div><h3 id="dtitle"></h3><div id="dsub" style="color:var(--ink-2);font-size:13px"></div></div>
+    <div class="ranges" role="group" aria-label="Time range">
+      <button class="btn" data-h="24">24 h</button><button class="btn" data-h="168">7 d</button>
+      <button class="btn" data-h="720">30 d</button><button class="btn" id="dclose" aria-label="Close">Close</button>
+    </div>
+  </div>
+  <div class="chartwrap"><svg id="dchart" role="img"></svg><div class="tip" id="tip"></div></div>
+  <div class="legend"><span>Mean</span><span class="lb">Target band (warning limits)</span><span class="ll">Alarm limits</span></div>
+  <div class="cal" id="dcal"></div>
+</dialog>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+                set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+const STATUS = { ok: "OK", warn: "Warning", alarm: "Alarm", nodata: "No data" };
+const FLAG = { threshold: "out of range", stale: "stale", sensor_fault: "sensor fault", calibration: "calibration due", node_offline: "node offline" };
+let sites = [], current = null, hours = 24;
+
+function fmt(v) {
+  if (v == null) return "–";
+  const a = Math.abs(v);
+  return a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : v.toFixed(2);
+}
+function show(s) {
+  if (s.value == null) return "–";
+  if (s.kind === "level_switch") return s.value >= 0.5 ? "Water OK" : "LOW";
+  return `${fmt(s.value)}<small>${esc(s.unit)}</small>`;
+}
+function ago(ts) {
+  if (!ts) return "never";
+  const s = Date.now() / 1000 - ts;
+  if (s < 60) return `${Math.max(0, s | 0)}s ago`;
+  if (s < 3600) return `${(s / 60) | 0}m ago`;
+  if (s < 86400) return `${(s / 3600) | 0}h ago`;
+  return `${(s / 86400) | 0}d ago`;
+}
+const when = ts => new Date(ts * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const chip = st => `<span class="chip ${st}">${STATUS[st] || st}</span>`;
+
+async function api(path, opts = {}) {
+  const headers = { "Content-Type": "application/json" };
+  const tok = store.get("agria-token");
+  if (tok) headers.Authorization = `Bearer ${tok}`;
+  let r = await fetch(path, { ...opts, headers });
+  if (r.status === 401) {
+    const t = prompt("This gateway requires an API token for changes. Enter it:");
+    if (!t) throw new Error("token required");
+    store.set("agria-token", t);
+    headers.Authorization = `Bearer ${t}`;
+    r = await fetch(path, { ...opts, headers });
+  }
+  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+  return r.json();
+}
+function who() {
+  let n = store.get("agria-name");
+  if (!n) { n = prompt("Your name (recorded with acknowledgements and calibrations):"); if (n) store.set("agria-name", n); }
+  return n;
+}
+
+// Sparkline: single series, target band shaded, no axes.
+function spark(points, th) {
+  if (!points.length) return `<svg viewBox="0 0 200 44" aria-hidden="true"></svg>`;
+  const vals = points.map(p => p.mean);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const t0 = points[0].ts, t1 = points[points.length - 1].ts || t0 + 1;
+  const x = t => 2 + (t - t0) / Math.max(1, t1 - t0) * 196, y = v => 42 - (v - lo) / (hi - lo) * 40;
+  let band = "";
+  if (th.warn_low != null || th.warn_high != null) {
+    const a = y(Math.min(hi, th.warn_high ?? hi)), b = y(Math.max(lo, th.warn_low ?? lo));
+    if (b > a) band = `<rect x="0" width="200" y="${a}" height="${b - a}" fill="var(--band)"/>`;
+  }
+  const d = points.length > 1 ? points.map((p, i) => `${i ? "L" : "M"}${x(p.ts).toFixed(1)},${y(p.mean).toFixed(1)}`).join("")
+    : `M2,${y(points[0].mean).toFixed(1)}L198,${y(points[0].mean).toFixed(1)}`;
+  return `<svg viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true">${band}
+    <path d="${d}" fill="none" stroke="var(--series)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+async function loadSparks() {
+  for (const site of sites) for (const s of site.sensors) {
+    if (s.kind === "level_switch") continue;
+    const el = document.getElementById(`sp-${s.key}`);
+    if (!el) continue;
+    try {
+      const h = await api(`/api/readings/${s.key}?hours=24&points=96`);
+      el.innerHTML = spark(h.points, s.thresholds);
+    } catch {}
+  }
+}
+
+function renderSites() {
+  const wrap = $("#sites");
+  wrap.innerHTML = sites.map(site => `
+    <h2>${esc(site.name)} <small>${esc(site.type)} · ${esc(site.timezone)}</small></h2>
+    <div class="nodes">${site.nodes.map(n => `<span class="chip ${n.status === "online" ? "ok" : n.status === "offline" ? "alarm" : "nodata"}"
+        title="${esc(n.description || "")}">${esc(n.id)}: ${esc(n.status)}</span>`).join("")}</div>
+    <div class="grid">${site.sensors.map(s => {
+      const st = s.value == null ? "nodata" : s.status;
+      const flags = s.flags.map(f => FLAG[f] || f).join(", ");
+      return `<button class="tile" data-key="${esc(s.key)}" aria-label="${esc(s.name)} details">
+        <div class="top"><span class="name">${esc(s.name)}</span>${chip(st)}</div>
+        <div class="value">${show(s)}</div>
+        <div id="sp-${esc(s.key)}">${s.kind === "level_switch" ? "" : spark([], {})}</div>
+        <div class="foot"><span>${esc(flags)}</span><span>${s.ts ? ago(s.ts) : "no data"}</span></div>
+      </button>`;
+    }).join("")}</div>
+    ${site.cameras.length ? `<div class="cams">${site.cameras.map(c => `<figure>
+        <img alt="Latest image from ${esc(c.name)}" src="/api/cameras/${esc(site.id)}/${esc(c.id)}/latest?t=${Date.now()}" onerror="this.style.visibility='hidden'">
+        <figcaption>${esc(c.name)}</figcaption></figure>`).join("")}</div>` : ""}
+  `).join("");
+  wrap.querySelectorAll(".tile").forEach(t => t.addEventListener("click", () => openDetail(t.dataset.key)));
+}
+
+async function renderAlerts() {
+  const list = await api("/api/alerts?active=true");
+  list.sort((a, b) => (b.severity === "alarm") - (a.severity === "alarm") || b.raised_ts - a.raised_ts);
+  $("#alertcount").textContent = list.length ? `${list.length} open` : "";
+  $("#alerts").innerHTML = list.length ? list.map(a => `<div class="alert">
+      ${chip(a.severity)}<div class="msg">${esc(a.message)}<div class="when">${esc(a.kind.replace("_", " "))} · raised ${when(a.raised_ts)}
+      ${a.acked_ts ? ` · acknowledged by ${esc(a.acked_by)}` : ""}</div></div>
+      ${a.acked_ts ? "" : `<button class="btn" data-ack="${a.id}">Acknowledge</button>`}</div>`).join("")
+    : `<div class="empty">No open alerts.</div>`;
+  $("#alerts").querySelectorAll("[data-ack]").forEach(b => b.addEventListener("click", async () => {
+    const by = who(); if (!by) return;
+    try { await api(`/api/alerts/${b.dataset.ack}/ack`, { method: "POST", body: JSON.stringify({ by }) }); renderAlerts(); }
+    catch (e) { alert(`Could not acknowledge: ${e.message}`); }
+  }));
+}
+
+async function refresh() {
+  try {
+    const [health, s] = await Promise.all([api("/api/health"), api("/api/sites")]);
+    sites = s;
+    const c = $("#conn");
+    c.className = `chip ${health.mqtt_connected ? "ok" : "alarm"}`;
+    c.textContent = health.mqtt_connected ? "MQTT connected" : "MQTT disconnected";
+    renderSites();
+    await renderAlerts();
+    $("#updated").textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    loadSparks();
+  } catch (e) {
+    $("#updated").innerHTML = `<span class="err">Gateway unreachable (${esc(e.message)})</span>`;
+  }
+}
+
+// Detail chart with crosshair tooltip.
+function findSensor(key) { for (const s of sites) for (const x of s.sensors) if (x.key === key) return [s, x]; return []; }
+
+async function openDetail(key) {
+  current = key;
+  const [site, s] = findSensor(key);
+  $("#dtitle").textContent = `${site.name} · ${s.name}`;
+  $("#dsub").textContent = `${fmt(s.value)} ${s.unit} · ${STATUS[s.value == null ? "nodata" : s.status]} · ${s.ts ? ago(s.ts) : "no data"} · ${s.key}`;
+  renderCal(s);
+  if (!$("#detail").open) $("#detail").showModal();
+  drawDetail();
+}
+
+function renderCal(s) {
+  const el = $("#dcal");
+  if (!s.calibration) { el.style.display = "none"; return; }
+  el.style.display = "";
+  const c = s.calibration, now = Date.now() / 1000;
+  const status = !c.last_ts ? "No calibration on record."
+    : c.due_ts < now ? `Calibration overdue since ${when(c.due_ts)} (last ${when(c.last_ts)}).`
+    : `Last calibrated ${when(c.last_ts)}; next due ${when(c.due_ts)}.`;
+  el.innerHTML = `<span>${esc(status)} Interval ${c.interval_days} days.</span><button class="btn" id="logcal">Log calibration done now</button>`;
+  $("#logcal").addEventListener("click", async () => {
+    const by = who(); if (!by) return;
+    const notes = prompt("Notes (buffer/standard used, slope/offset, anything odd):") || "";
+    try {
+      await api("/api/calibrations", { method: "POST", body: JSON.stringify({ sensor_key: s.key, by, notes }) });
+      await refresh(); openDetail(s.key);
+    } catch (e) { alert(`Could not save: ${e.message}`); }
+  });
+}
+
+async function drawDetail() {
+  document.querySelectorAll(".ranges [data-h]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.h === hours)));
+  const [, s] = findSensor(current);
+  const svg = $("#dchart"), tip = $("#tip");
+  const { points } = await api(`/api/readings/${current}?hours=${hours}&points=400`);
+  const W = svg.clientWidth || 860, H = 280, L = 48, R = 12, T = 10, B = 26;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("aria-label", `${s.name} over the last ${hours} hours`);
+  if (!points.length) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="var(--muted)">No data in this range</text>`; return; }
+  const th = s.thresholds;
+  let lo = Math.min(...points.map(p => p.min)), hi = Math.max(...points.map(p => p.max));
+  if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+  const end = Date.now() / 1000, start = end - hours * 3600;
+  const x = t => L + (t - start) / (end - start) * (W - L - R), y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  const ticks = [];
+  const step = (() => { const raw = (hi - lo) / 4, m = 10 ** Math.floor(Math.log10(raw)); return [1, 2, 2.5, 5, 10].map(k => k * m).find(k => k >= raw); })();
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks.push(v);
+  let g = ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>
+    <text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${fmt(v)}</text>`).join("");
+  const nx = Math.max(2, Math.min(6, Math.floor(W / 140)));
+  for (let i = 0; i <= nx; i++) {
+    const t = start + (end - start) * i / nx, d = new Date(t * 1000);
+    const lab = hours <= 24 ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { month: "short", day: "numeric" });
+    g += `<text x="${x(t)}" y="${H - 6}" text-anchor="${i === 0 ? "start" : i === nx ? "end" : "middle"}" font-size="11" fill="var(--muted)">${lab}</text>`;
+  }
+  if (th.warn_low != null || th.warn_high != null) {
+    const a = y(Math.min(hi, th.warn_high ?? hi)), b = y(Math.max(lo, th.warn_low ?? lo));
+    if (b > a) g += `<rect x="${L}" width="${W - L - R}" y="${a}" height="${b - a}" fill="var(--band)"/>`;
+  }
+  for (const k of ["alarm_low", "alarm_high"]) if (th[k] != null && th[k] > lo && th[k] < hi)
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(th[k])}" y2="${y(th[k])}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+  g += `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="var(--axis)"/>`;
+  // Break the line across gaps longer than 3 buckets so outages are visible.
+  const gap = points.length > 1 ? 3 * (points[1].ts - points[0].ts || 1) : Infinity;
+  const d = points.map((p, i) => `${i && p.ts - points[i - 1].ts <= Math.max(gap, 1) ? "L" : "M"}${x(p.ts).toFixed(1)},${y(p.mean).toFixed(1)}`).join("");
+  g += `<path d="${d}" fill="none" stroke="var(--series)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(points[points.length - 1].ts)}" cy="${y(points[points.length - 1].mean)}" r="4" fill="var(--series)" stroke="var(--surface)" stroke-width="2"/>
+    <line id="xh" y1="${T}" y2="${H - B}" stroke="var(--axis)" visibility="hidden"/>
+    <circle id="dot" r="4" fill="var(--series)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
+    <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="hit"/>`;
+  svg.innerHTML = g;
+  const xh = $("#xh", svg), dot = $("#dot", svg);
+  $("#hit", svg).addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    const t = start + (px - L) / (W - L - R) * (end - start);
+    let best = points[0];
+    for (const p of points) if (Math.abs(p.ts - t) < Math.abs(best.ts - t)) best = p;
+    const cx = x(best.ts), cy = y(best.mean);
+    xh.setAttribute("x1", cx); xh.setAttribute("x2", cx); xh.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", cx); dot.setAttribute("cy", cy); dot.setAttribute("visibility", "visible");
+    tip.style.display = "block";
+    tip.innerHTML = `${when(best.ts)}<br>Mean <b>${fmt(best.mean)} ${esc(s.unit)}</b><br>Range ${fmt(best.min)}–${fmt(best.max)}`;
+    const left = cx * r.width / W;
+    tip.style.left = `${Math.min(left + 12, r.width - tip.offsetWidth - 4)}px`;
+    tip.style.top = `${Math.max(0, cy * r.height / H - 30)}px`;
+  });
+  $("#hit", svg).addEventListener("pointerleave", () => {
+    tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden");
+  });
+}
+
+document.querySelectorAll(".ranges [data-h]").forEach(b => b.addEventListener("click", () => { hours = +b.dataset.h; drawDetail(); }));
+$("#dclose").addEventListener("click", () => $("#detail").close());
+$("#detail").addEventListener("close", () => { current = null; });
+
+refresh();
+setInterval(() => { if (!current) refresh(); }, 15000);
+</script>
+</body>
+</html>

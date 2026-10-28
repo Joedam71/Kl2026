@@ -1,0 +1,96 @@
+# Reservoir node: Atlas Scientific EZO pH / EC / DO circuits (I2C mode, on an
+# electrically isolated carrier board), DS18B20 water temperature,
+# ultrasonic tank level and a low-level float switch.
+#
+# Isolation matters: un-isolated pH and EC probes in the same tank interfere
+# with each other and read garbage.
+#
+# Before first use, set each EZO to I2C mode, and set the EZO-EC to report EC only
+# (commands "O,TDS,0", "O,S,0", "O,SG,0") so the reading is a single value.
+i2c:
+  sda: ${i2c_sda}
+  scl: ${i2c_scl}
+  scan: true
+
+one_wire:
+  - platform: gpio
+    pin: ${onewire_pin}
+
+sensor:
+  - platform: dallas_temp
+    name: water_temp
+    id: water_temp
+    accuracy_decimals: 2
+    update_interval: 30s
+
+  - platform: ezo
+    name: ph
+    id: ph_ezo
+    address: 99
+    unit_of_measurement: "pH"
+    accuracy_decimals: 2
+    update_interval: 30s
+
+  - platform: ezo
+    name: ec
+    id: ec_ezo
+    address: 100
+    unit_of_measurement: "mS/cm"
+    accuracy_decimals: 3
+    update_interval: 30s
+    filters:
+      - multiply: 0.001   # EZO-EC reports µS/cm
+
+  - platform: ezo
+    name: do
+    id: do_ezo
+    address: 97
+    unit_of_measurement: "mg/L"
+    accuracy_decimals: 2
+    update_interval: 30s
+
+  - platform: ultrasonic
+    id: tank_distance
+    internal: true
+    trigger_pin: ${us_trigger_pin}
+    echo_pin: ${us_echo_pin}
+    update_interval: 30s
+    filters:
+      - median:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: tank_level
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+    update_interval: 30s
+    # Distance from sensor face to water: tank_empty_m when empty, tank_full_m when full.
+    lambda: |-
+      float d = id(tank_distance).state;
+      if (isnan(d)) return NAN;
+      return 100.0f * (${tank_empty_m} - d) / (${tank_empty_m} - ${tank_full_m});
+
+binary_sensor:
+  - platform: gpio
+    name: tank_low
+    pin:
+      number: ${float_pin}
+      mode: INPUT_PULLUP
+    # Float closed (pulled low) = water present -> ON. Wire it so a broken wire
+    # reads OFF (low water), failing toward an alarm, not toward silence.
+    filters:
+      - invert:
+      - delayed_on_off: 5s
+
+interval:
+  # Temperature-compensate pH, EC and DO with the live water temperature.
+  - interval: 60s
+    then:
+      - lambda: |-
+          float t = id(water_temp).state;
+          if (!isnan(t)) {
+            id(ph_ezo).set_t(t);
+            id(ec_ezo).set_t(t);
+            id(do_ezo).set_t(t);
+          }

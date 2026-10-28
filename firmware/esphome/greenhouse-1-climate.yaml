@@ -1,0 +1,11 @@
+substitutions:
+  site: greenhouse-1
+  node: gh1-climate
+  i2c_sda: GPIO21
+  i2c_scl: GPIO22
+  co2_asc: "true"
+  par_umol_per_volt: "1000.0"   # placeholder: use the factor from your PAR sensor's calibration certificate
+
+packages:
+  base: !include common/base.yaml
+  climate: !include common/climate.yaml

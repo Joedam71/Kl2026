@@ -1,0 +1,44 @@
+# Canopy climate node: SHT45 (temp/RH) + SCD41 (CO2) + voltage-output PAR sensor via ADS1115.
+# Mount temp/RH in an aspirated radiation shield at canopy height; an unshielded
+# sensor in a greenhouse reads several degrees high in sun.
+i2c:
+  sda: ${i2c_sda}
+  scl: ${i2c_scl}
+  scan: true
+
+ads1115:
+  - address: 0x48
+
+sensor:
+  - platform: sht4x
+    temperature:
+      name: air_temp
+      accuracy_decimals: 2
+    humidity:
+      name: rh
+      accuracy_decimals: 1
+    update_interval: 30s
+
+  - platform: scd4x
+    co2:
+      name: co2
+    update_interval: 30s
+    # Automatic self-calibration assumes the sensor sees ~400 ppm fresh air
+    # weekly. Disable it in a CO2-enriched container and calibrate manually.
+    automatic_self_calibration: ${co2_asc}
+
+  - platform: ads1115
+    multiplexer: A0_GND
+    gain: 4.096
+    id: par_volts
+    internal: true
+    update_interval: 30s
+
+  - platform: template
+    name: ppfd
+    unit_of_measurement: "µmol/m²/s"
+    accuracy_decimals: 0
+    update_interval: 30s
+    # PPFD = volts x calibration factor from the sensor's certificate. Set it per sensor.
+    lambda: |-
+      return max(0.0f, id(par_volts).state * ${par_umol_per_volt});

@@ -1,0 +1,15 @@
+substitutions:
+  site: container-1
+  node: c1-nutrient
+  i2c_sda: GPIO21
+  i2c_scl: GPIO22
+  onewire_pin: GPIO4
+  us_trigger_pin: GPIO25
+  us_echo_pin: GPIO26   # via 5V->3.3V level shifter
+  float_pin: GPIO19
+  tank_empty_m: "0.80"   # measure on the real reservoir
+  tank_full_m: "0.15"
+
+packages:
+  base: !include common/base.yaml
+  nutrient: !include common/nutrient.yaml

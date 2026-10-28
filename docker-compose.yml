@@ -1,0 +1,40 @@
+# Site gateway stack: MQTT broker + Agria gateway.
+#   ./deploy/setup.sh           # first time: creates .env and broker passwords
+#   docker compose up -d
+#   docker compose --profile sim up -d   # also run the simulator (no hardware needed)
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./deploy/mosquitto/passwd:/mosquitto/config/passwd:ro
+      - mosquitto-data:/mosquitto/data
+
+  agria:
+    build: .
+    restart: unless-stopped
+    depends_on: [mosquitto]
+    env_file: .env
+    environment:
+      AGRIA_MQTT_HOST: mosquitto
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+      - agria-data:/data
+
+  simulator:
+    build: .
+    profiles: ["sim"]
+    depends_on: [mosquitto]
+    env_file: .env
+    entrypoint: ["sh", "-c", "exec agria-sim --host mosquitto --config /app/config/sites.yaml --username \"$$SIM_MQTT_USERNAME\" --password \"$$SIM_MQTT_PASSWORD\" --interval 10"]
+    volumes:
+      - ./config:/app/config:ro
+
+volumes:
+  mosquitto-data:
+  agria-data:
