@@ -1,0 +1,30 @@
+# One level's water delivery. Included six times with vars.
+sensor:
+  # Hall-effect flow meter. GPIO34-39 have no internal pull-up: fit an
+  # external 10 k pull-up to 3.3 V on every flow input.
+  - platform: pulse_meter
+    pin:
+      number: ${flow_pin}
+      mode: INPUT
+    name: l${level}_flow
+    unit_of_measurement: L/min
+    accuracy_decimals: 2
+    timeout: 10s
+    filters:
+      - multiply: ${l_per_pulse}   # pulses/min -> L/min
+      - heartbeat: 30s             # republish 0 while idle so the gateway sees a live meter
+    total:
+      name: l${level}_volume
+      unit_of_measurement: L
+      accuracy_decimals: 3
+      filters:
+        - multiply: ${l_per_pulse}
+        - heartbeat: 30s
+
+binary_sensor:
+  # Valve position feedback (limit switch or the valve's own feedback contact),
+  # not the command signal: it shows what the valve actually did.
+  - platform: gpio
+    name: l${level}_valve
+    pin: {number: "${valve_pin}", mode: INPUT_PULLUP, inverted: true}
+    filters: [{delayed_on_off: 1s}]

@@ -12,6 +12,7 @@ from pathlib import Path
 from .alerts import AlertManager
 from .cameras import CameraCapture
 from .config import Config, load
+from .cycles import Cycles
 from .hub import Hub
 from .mqtt_client import MqttIngest
 from .notify import Notifier
@@ -59,6 +60,7 @@ class Gateway:
         self.notifier = Notifier(self.cfg.app.notify)
         self.alerts = AlertManager(self.store, self.notifier)
         self.hub = Hub(self.cfg, self.store, self.alerts)
+        self.cycles = Cycles(self.cfg, self.store)
         self.mqtt = (MqttIngest(self.hub, settings.mqtt_host, settings.mqtt_port,
                                 settings.mqtt_username, settings.mqtt_password)
                      if settings.mqtt_host else None)

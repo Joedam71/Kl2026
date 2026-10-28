@@ -1,30 +1,35 @@
 # MQTT contract
 
-The root topic is `agria/`. Site and node IDs match `config/sites.yaml`. The layout below matches what ESPHome produces with `topic_prefix: agria/<site>/<node>`, so the nodes need no custom firmware.
+The root topic is `agria/`. Site and node IDs match `config/sites.yaml`. The layout matches ESPHome's `topic_prefix: agria/<site>/<node>`, so the nodes need no custom firmware.
 
 ## Telemetry (Phase 1)
 
 | Topic | Payload | Notes |
 |---|---|---|
-| `agria/<site>/<node>/sensor/<sensor>/state` | Number as text, e.g. `5.82` | `nan` and out-of-range values are treated as implausible |
-| `agria/<site>/<node>/binary_sensor/<sensor>/state` | `ON` / `OFF` | Stored as 1 / 0 |
-| `agria/<site>/<node>/status` | `online` / `offline` | Retained. `offline` is the node's last will and testament. |
+| `agria/<site>/<node>/sensor/<sensor>/state` | Number as text | `nan` and out-of-range values are dropped and counted as implausible |
+| `agria/<site>/<node>/binary_sensor/<sensor>/state` | `ON` / `OFF` | Valves and leaks; published on change |
+| `agria/<site>/<node>/status` | `online` / `offline` | Retained; `offline` is the node's last will |
 
-The gateway timestamps each reading on receipt. Topics that don't match a configured sensor are listed at `GET /api/unmapped`.
+## Rack sensor naming
 
-## Reserved for Phase 2+ (control)
+Rack sensors carry the level in their ID, so the gateway can map them to rack levels and irrigation zones:
 
-These topics are not implemented yet. They are defined now so that later control and robotics work fits into the same structure.
+| Node | Sensor IDs per level N |
+|---|---|
+| `<rack>-levels` | `lN_moisture_a`, `lN_moisture_b` (% VWC), `lN_moisture_a_mv`, `lN_moisture_b_mv` (raw), `lN_weight` (kg), `lN_medium_temp` (°C) |
+| `<rack>-water` | `lN_valve` (binary feedback), `lN_flow` (L/min), `lN_volume` (L, cumulative) |
+
+Rack-wide: `leak_floor`, `leak_supply` (binary), `pump_current` (A), `air_temp_top`, `rh_top`, `air_temp_bottom`, `rh_bottom`.
+
+The gateway timestamps on receipt. Topics that don't match the config are listed at `GET /api/unmapped`.
+
+## Reserved for Phase 2 (irrigation control)
+
+Not implemented yet. The topics are defined now so control fits the same structure.
 
 | Topic | Direction | Payload |
 |---|---|---|
-| `agria/<site>/<node>/cmd/<target>` | gateway → controller | JSON `{"id": "<uuid>", "setpoint": 1.0, "source": "user:joe", "expires": <ts>}` |
-| `agria/<site>/<node>/ack/<target>` | controller → gateway | JSON `{"id": "<uuid>", "accepted": true, "reason": null}` |
-| `agria/<site>/<node>/actuator/<target>/state` | controller → gateway | Actual output state (relay on/off, duty cycle, dosing pulses) |
+| `agria/<site>/<rack>-water/cmd/lN` | gateway → controller | JSON `{"id": "<uuid>", "mode": "sensor", "lower_vwc": <approved>, "upper_vwc": <approved>, "pulse_l": 1.5, "source": "user:joe", "expires": <ts>}` |
+| `agria/<site>/<rack>-water/ack/lN` | controller → gateway | JSON `{"id": "<uuid>", "accepted": true, "reason": null}` |
 
-Rules for control:
-
-- Commands are setpoints and modes, never raw relay toggles.
-- Every command carries an ID and an expiry. When a command expires, the controller falls back to its local default.
-- The controller can reject a command, for example when it falls outside the controller's hard limits, and must say why in the acknowledgement.
-- Robots (Phase 5) use the same command, acknowledgement and state pattern through the ROS 2 MQTT bridge.
+The controller enforces its own hard limits regardless of any command, falls back to its local default when a command expires, and rejects out-of-limit commands with a reason.

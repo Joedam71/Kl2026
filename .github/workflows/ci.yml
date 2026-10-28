@@ -23,4 +23,4 @@ jobs:
       - working-directory: firmware/esphome
         run: |
           cp secrets.yaml.example secrets.yaml
-          for f in *-climate.yaml *-nutrient.yaml; do esphome config "$f" > /dev/null; done
+          for f in *-climate.yaml rack-*.yaml; do esphome config "$f" > /dev/null; done

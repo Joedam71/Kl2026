@@ -1,9 +1,14 @@
 """SQLite storage for readings, alerts, calibrations and camera images.
 
-SQLite is deliberate at this scale (one greenhouse, one container, ~30
-sensors at 30 s ≈ 90k rows/day). Raw rows are kept ``raw_days`` and then
-rolled up to hourly mean/min/max. Move to TimescaleDB when the fleet grows;
-everything goes through this class, so that is a contained change.
+SQLite is deliberate for the pilot (one instrumented rack plus site
+climate, ~60 sensors at 30 s, about 170k rows/day). Raw rows are kept
+``raw_days`` and then rolled up to hourly mean/min/max. Move to TimescaleDB
+at Phase 3 scale-out; everything goes through this class, so that is a
+contained change.
+
+Crop-cycle records deliberately hold NO medium formulation or inoculation
+recipe data. Batches are identified by an opaque batch ID; the formula
+lives in a separate restricted system (see docs/DATA_MODEL.md).
 """
 
 from __future__ import annotations
@@ -63,6 +68,55 @@ CREATE TABLE IF NOT EXISTS images (
     path TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_images ON images(site, camera, ts);
+
+CREATE TABLE IF NOT EXISTS irrigation_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site TEXT NOT NULL,
+    zone TEXT NOT NULL,
+    rack TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    start_ts REAL NOT NULL,
+    end_ts REAL NOT NULL,
+    liters REAL NOT NULL,
+    source TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_irr ON irrigation_events(site, zone, end_ts);
+
+CREATE TABLE IF NOT EXISTS media_batches (
+    id TEXT PRIMARY KEY,
+    received_ts REAL,
+    notes TEXT,
+    created_ts REAL NOT NULL,
+    created_by TEXT
+);
+
+CREATE TABLE IF NOT EXISTS crop_cycles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site TEXT NOT NULL,
+    rack TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    batch_id TEXT,
+    inoculation_ts REAL,
+    variety TEXT NOT NULL,
+    irrigation_mode TEXT NOT NULL,
+    stage TEXT,
+    start_ts REAL NOT NULL,
+    end_ts REAL,
+    yield_g REAL,
+    notes TEXT,
+    created_by TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cycles ON crop_cycles(site, rack, level, end_ts);
+
+CREATE TABLE IF NOT EXISTS interventions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cycle_id INTEGER NOT NULL REFERENCES crop_cycles(id),
+    ts REAL NOT NULL,
+    kind TEXT NOT NULL,
+    notes TEXT,
+    by TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_interventions ON interventions(cycle_id, ts);
 """
 
 
@@ -197,3 +251,94 @@ class Store:
     def latest_image(self, site: str, camera: str) -> dict | None:
         rows = self._query("SELECT * FROM images WHERE site=? AND camera=? ORDER BY ts DESC LIMIT 1", (site, camera))
         return dict(rows[0]) if rows else None
+
+    # irrigation events
+
+    def add_irrigation_event(self, site, zone, rack, level, start_ts, end_ts, liters, source) -> int:
+        return self._exec(
+            "INSERT INTO irrigation_events(site, zone, rack, level, start_ts, end_ts, liters, source) "
+            "VALUES (?,?,?,?,?,?,?,?)", (site, zone, rack, level, start_ts, end_ts, liters, source)).lastrowid
+
+    def irrigation_events(self, site: str | None = None, zone: str | None = None, since: float | None = None,
+                          limit: int = 500) -> list[dict]:
+        where, args = [], []
+        for col, val in (("site", site), ("zone", zone)):
+            if val is not None:
+                where.append(f"{col}=?")
+                args.append(val)
+        if since is not None:
+            where.append("end_ts>=?")
+            args.append(since)
+        sql = "SELECT * FROM irrigation_events" + (" WHERE " + " AND ".join(where) if where else "")
+        rows = self._query(sql + " ORDER BY end_ts DESC LIMIT ?", (*args, limit))
+        return [dict(r) for r in rows]
+
+    def irrigation_liters(self, site: str, zone: str, start: float, end: float) -> float:
+        row = self._query("SELECT COALESCE(SUM(liters), 0) AS l FROM irrigation_events "
+                          "WHERE site=? AND zone=? AND start_ts>=? AND start_ts<?", (site, zone, start, end))[0]
+        return float(row["l"])
+
+    # media batches (opaque IDs only; no formulation data)
+
+    def add_batch(self, batch_id: str, received_ts: float | None, notes: str | None, by: str | None, ts: float):
+        self._exec("INSERT INTO media_batches(id, received_ts, notes, created_ts, created_by) VALUES (?,?,?,?,?)",
+                   (batch_id, received_ts, notes, ts, by))
+
+    def batches(self) -> list[dict]:
+        return [dict(r) for r in self._query("SELECT * FROM media_batches ORDER BY created_ts DESC")]
+
+    def batch(self, batch_id: str) -> dict | None:
+        rows = self._query("SELECT * FROM media_batches WHERE id=?", (batch_id,))
+        return dict(rows[0]) if rows else None
+
+    # crop cycles
+
+    def add_cycle(self, **f) -> int:
+        cols = ("site", "rack", "level", "batch_id", "inoculation_ts", "variety", "irrigation_mode",
+                "stage", "start_ts", "notes", "created_by")
+        return self._exec(f"INSERT INTO crop_cycles({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})",
+                          tuple(f.get(c) for c in cols)).lastrowid
+
+    def cycle(self, cycle_id: int) -> dict | None:
+        rows = self._query("SELECT * FROM crop_cycles WHERE id=?", (cycle_id,))
+        return dict(rows[0]) if rows else None
+
+    def cycles(self, site: str | None = None, active: bool | None = None, limit: int = 500) -> list[dict]:
+        where, args = [], []
+        if site:
+            where.append("site=?")
+            args.append(site)
+        if active is True:
+            where.append("end_ts IS NULL")
+        elif active is False:
+            where.append("end_ts IS NOT NULL")
+        sql = "SELECT * FROM crop_cycles" + (" WHERE " + " AND ".join(where) if where else "")
+        return [dict(r) for r in self._query(sql + " ORDER BY start_ts DESC LIMIT ?", (*args, limit))]
+
+    def active_cycle(self, site: str, rack: str, level: int) -> dict | None:
+        rows = self._query("SELECT * FROM crop_cycles WHERE site=? AND rack=? AND level=? AND end_ts IS NULL",
+                           (site, rack, level))
+        return dict(rows[0]) if rows else None
+
+    def update_cycle(self, cycle_id: int, **fields):
+        allowed = {"stage", "notes", "end_ts", "yield_g", "irrigation_mode"}
+        sets = {k: v for k, v in fields.items() if k in allowed}
+        if sets:
+            self._exec(f"UPDATE crop_cycles SET {', '.join(f'{k}=?' for k in sets)} WHERE id=?",
+                       (*sets.values(), cycle_id))
+
+    def add_intervention(self, cycle_id: int, ts: float, kind: str, notes: str | None, by: str | None) -> int:
+        return self._exec("INSERT INTO interventions(cycle_id, ts, kind, notes, by) VALUES (?,?,?,?,?)",
+                          (cycle_id, ts, kind, notes, by)).lastrowid
+
+    def interventions(self, cycle_id: int) -> list[dict]:
+        return [dict(r) for r in self._query("SELECT * FROM interventions WHERE cycle_id=? ORDER BY ts", (cycle_id,))]
+
+    # export
+
+    def raw_readings(self, keys: list[str], start: float, end: float):
+        if not keys:
+            return []
+        q = ",".join("?" * len(keys))
+        return self._query(f"SELECT sensor_key, ts, value FROM readings WHERE sensor_key IN ({q}) "
+                           f"AND ts>=? AND ts<=? ORDER BY ts", (*keys, start, end))

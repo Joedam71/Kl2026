@@ -1,0 +1,49 @@
+substitutions:
+  site: container-1
+  node: rack-a-water
+
+packages:
+  base: !include common/base.yaml
+  rack: !include common/rack_water.yaml
+  level1: !include
+    file: common/rack_water_level.yaml
+    vars:
+      level: 1
+      flow_pin: GPIO34
+      valve_pin: GPIO13
+      l_per_pulse: "0.00222"   # from the flow meter datasheet (e.g. 450 pulses/L); verify by bucket test
+  level2: !include
+    file: common/rack_water_level.yaml
+    vars:
+      level: 2
+      flow_pin: GPIO35
+      valve_pin: GPIO14
+      l_per_pulse: "0.00222"   # from the flow meter datasheet (e.g. 450 pulses/L); verify by bucket test
+  level3: !include
+    file: common/rack_water_level.yaml
+    vars:
+      level: 3
+      flow_pin: GPIO36
+      valve_pin: GPIO16
+      l_per_pulse: "0.00222"   # from the flow meter datasheet (e.g. 450 pulses/L); verify by bucket test
+  level4: !include
+    file: common/rack_water_level.yaml
+    vars:
+      level: 4
+      flow_pin: GPIO39
+      valve_pin: GPIO17
+      l_per_pulse: "0.00222"   # from the flow meter datasheet (e.g. 450 pulses/L); verify by bucket test
+  level5: !include
+    file: common/rack_water_level.yaml
+    vars:
+      level: 5
+      flow_pin: GPIO32
+      valve_pin: GPIO18
+      l_per_pulse: "0.00222"   # from the flow meter datasheet (e.g. 450 pulses/L); verify by bucket test
+  level6: !include
+    file: common/rack_water_level.yaml
+    vars:
+      level: 6
+      flow_pin: GPIO33
+      valve_pin: GPIO19
+      l_per_pulse: "0.00222"   # from the flow meter datasheet (e.g. 450 pulses/L); verify by bucket test

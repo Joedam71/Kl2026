@@ -1,0 +1,42 @@
+# Rack water node: per-level flow meter (rate + running total) and valve-position
+# feedback (common/rack_water_level.yaml), two leak sensors, supply-pump current.
+#
+# Phase 1 only MEASURES the existing timer irrigation; this node drives nothing.
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+
+ads1115:
+  - {address: 0x48, id: ads_w}
+
+sensor:
+  # SCT-013 style current transformer across ADS1115 A0-A1.
+  - platform: ads1115
+    ads1115_id: ads_w
+    multiplexer: A0_A1
+    gain: 1.024
+    id: ct_v
+    internal: true
+    update_interval: never
+  - platform: ct_clamp
+    sensor: ct_v
+    name: pump_current
+    unit_of_measurement: A
+    accuracy_decimals: 2
+    update_interval: 30s
+    filters:
+      # Placeholder: set from the CT's rating (e.g. 30 A / 1 V) and a clamp-meter check.
+      - calibrate_linear:
+          - 0 -> 0
+          - 1.0 -> 30.0
+
+binary_sensor:
+  # Rope or spot leak sensors with a dry-contact output: closed = water present.
+  - platform: gpio
+    name: leak_floor
+    pin: {number: GPIO25, mode: INPUT_PULLUP, inverted: true}
+    filters: [{delayed_on: 2s}]
+  - platform: gpio
+    name: leak_supply
+    pin: {number: GPIO26, mode: INPUT_PULLUP, inverted: true}
+    filters: [{delayed_on: 2s}]

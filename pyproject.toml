@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agria"
 version = "0.1.0"
-description = "Agria site gateway: sensor monitoring, alerting and camera capture for greenhouses and containers"
+description = "AGRIA site gateway: root-zone and irrigation monitoring, crop-cycle records and alerting for soil-based AGRIA racks"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",

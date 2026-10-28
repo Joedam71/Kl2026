@@ -1,0 +1,34 @@
+# Rack root-zone node: six levels of moisture, tray weight and medium temperature,
+# plus air temperature/RH at the top and bottom of the rack.
+#
+# Per level (common/rack_level.yaml): two analog moisture sensors on an ADS1115,
+# one HX711 load-cell amplifier under the reference tray, one DS18B20 in the medium.
+#
+# The medium is only ~2 in deep: install moisture sensors horizontally at
+# mid-depth, never vertically, and keep them clear of the tray walls.
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+
+ads1115:
+  - {address: 0x48, id: ads_1}   # L1 a/b, L2 a/b
+  - {address: 0x49, id: ads_2}   # L3 a/b, L4 a/b
+  - {address: 0x4A, id: ads_3}   # L5 a/b, L6 a/b
+
+one_wire:
+  - platform: gpio
+    pin: GPIO4
+
+sensor:
+  # SHT45 comes in two fixed-address variants: -AD1B (0x44) and -BD1B (0x45).
+  - platform: sht4x
+    address: 0x44
+    temperature: {name: air_temp_top, accuracy_decimals: 2}
+    humidity: {name: rh_top, accuracy_decimals: 1}
+    update_interval: 30s
+  - platform: sht4x
+    address: 0x45
+    temperature: {name: air_temp_bottom, accuracy_decimals: 2}
+    humidity: {name: rh_bottom, accuracy_decimals: 1}
+    update_interval: 30s

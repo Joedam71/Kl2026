@@ -22,6 +22,7 @@ from collections import deque
 from .alerts import AlertManager, Severity, ThresholdState
 from .config import Config, Sensor
 from .derived import DliIntegrator, local_midnight, vpd_kpa
+from .irrigation import IrrigationMonitor
 from .store import Store
 
 log = logging.getLogger(__name__)
@@ -34,6 +35,9 @@ VPD_PAIR_WINDOW_S = 120.0
 # are dropped silently instead of paging someone twice.
 FAULT_WINDOW_S = 600.0
 FAULT_COUNT = 3
+
+# Plain words for binary sensors (value 0, value 1) in alert messages.
+BINARY_WORDS = {"leak": ("dry", "water detected"), "valve_state": ("closed", "open")}
 
 LIMIT_TEXT = {
     "alarm_low": ("below", "alarm low"),
@@ -83,6 +87,7 @@ class Hub:
         self._faults: dict[str, deque[float]] = {}
         self.last_cal = store.last_calibrations()
 
+        self.irrigation = IrrigationMonitor(cfg, store, alerts, self.latest)
         self._known_nodes = {f"{s.id}/{n.id}" for s in cfg.sites for n in s.nodes}
         self._derived_by_input: dict[str, list[Sensor]] = {}
         self._dli: dict[str, DliIntegrator] = {}
@@ -168,13 +173,18 @@ class Hub:
             recent = self._faults.get(sensor.key)
             faults_recent = bool(recent) and recent[-1] >= ts - FAULT_WINDOW_S
 
+        self.irrigation.on_reading(sensor.key, value, ts)
         if not faults_recent:
             self.alerts.clear(sensor.key, sensor.site, "sensor_fault", ts, f"{name} readings are plausible again")
         self.alerts.clear(sensor.key, sensor.site, "stale", ts, f"{name} is reporting again")
         if changed:
+            words = BINARY_WORDS.get(sensor.kind, ("off", "on")) if sensor.binary else None
             if state.level == Severity.OK:
-                self.alerts.clear(sensor.key, sensor.site, "threshold", ts,
-                                  f"{name} back in range at {fmt(value)} {sensor.unit}".rstrip())
+                now_txt = words[value >= 0.5] if words else f"{fmt(value)} {sensor.unit}".rstrip()
+                self.alerts.clear(sensor.key, sensor.site, "threshold", ts, f"{name} back to normal: {now_txt}")
+            elif words:
+                self.alerts.raise_(sensor.key, sensor.site, "threshold", state.level,
+                                   f"{name}: {words[value >= 0.5]}", value, ts)
             else:
                 side, label = LIMIT_TEXT[state.limit]
                 limit_v = getattr(sensor.thresholds, state.limit)
@@ -221,6 +231,7 @@ class Hub:
                                        None, now)
             if s.calibration_interval_days:
                 self._check_calibration(s, now)
+        self.irrigation.check(now)
 
     def _check_calibration(self, s: Sensor, now: float):
         name = f"{self._site_name(s.site)} · {s.name}"
@@ -260,19 +271,21 @@ class Hub:
         cal = self.last_cal.get(s.key)
         return {
             "key": s.key, "id": s.id, "node": s.node, "name": s.name, "kind": s.kind, "unit": s.unit,
-            "zone": s.zone, "derived": s.derived is not None,
+            "rack": s.rack, "level": s.level, "binary": s.binary, "derived": s.derived is not None,
             "value": latest[1] if latest else None, "ts": latest[0] if latest else None,
             "status": worst.label,
             "flags": [k for k, v in statuses.items() if v],
             "thresholds": s.thresholds.model_dump(),
-            "calibration": None if not s.calibration_interval_days else {
+            "calibration": {
                 "interval_days": s.calibration_interval_days,
                 "last_ts": cal["ts"] if cal else None,
-                "due_ts": cal["ts"] + s.calibration_interval_days * 86400 if cal else None,
+                "last_notes": cal["notes"] if cal else None,
+                "due_ts": cal["ts"] + s.calibration_interval_days * 86400 if cal and s.calibration_interval_days else None,
             },
         }
 
-    def snapshot(self) -> list[dict]:
+    def snapshot(self, now: float | None = None) -> list[dict]:
+        now = time.time() if now is None else now
         out = []
         for site in self.cfg.sites:
             sensors = [self.sensor_view(s) for s in self.cfg.site_sensors(site.id)]
@@ -282,6 +295,35 @@ class Hub:
                 nodes.append({"id": n.id, "description": n.description,
                               "status": st.get("status", "unknown"), "ts": st.get("ts")})
             out.append({"id": site.id, "name": site.name, "type": site.type, "timezone": site.timezone,
-                        "nodes": nodes, "sensors": sensors,
-                        "cameras": [{"id": c.id, "name": c.name or c.id} for c in site.cameras]})
+                        "nodes": nodes, "sensors": [v for v in sensors if v["rack"] is None],
+                        "racks": [self.rack_view(site.id, r.id, now) for r in site.racks],
+                        "cameras": [{"id": c.id, "name": c.name or c.id, "rack": c.rack, "level": c.level}
+                                    for c in site.cameras]})
         return out
+
+    ZONE_ALERTS = ("valve_open_too_long", "no_flow", "flow_without_valve", "daily_volume")
+
+    def rack_view(self, site_id: str, rack_id: str, now: float) -> dict:
+        site = self.cfg.site(site_id)
+        rack = next(r for r in site.racks if r.id == rack_id)
+        sensors = [s for s in self.cfg.site_sensors(site_id) if s.rack == rack_id]
+        levels = []
+        for lvl in range(rack.levels, 0, -1):  # top shelf first, as it stands
+            views = [self.sensor_view(s) for s in sensors if s.level == lvl]
+            grouped: dict[str, list[dict]] = {}
+            for v in views:
+                grouped.setdefault(v["kind"], []).append(v)
+            zone = self.cfg.zone_for(site_id, rack_id, lvl)
+            zone_flags = [k for k in self.ZONE_ALERTS if zone and self.alerts.is_active(zone.key, k)]
+            sevs = [Severity.parse(v["status"]) for v in views]
+            if zone:
+                sevs += [self.alerts.is_active(zone.key, k) for k in zone_flags]
+            worst = max(sevs, default=Severity.OK)
+            levels.append({
+                "level": lvl, "sensors": grouped, "status": worst.label,
+                "irrigation": self.irrigation.zone_view(zone, now) if zone else None,
+                "irrigation_flags": zone_flags,
+                "cycle": self.store.active_cycle(site_id, rack_id, lvl),
+            })
+        return {"id": rack.id, "name": rack.name or rack.id, "levels": levels,
+                "sensors": [self.sensor_view(s) for s in sensors if s.level is None]}

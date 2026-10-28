@@ -1,0 +1,71 @@
+# One rack level. Included six times by the rack levels node with vars.
+#
+# Moisture: raw millivolts are published alongside VWC. The VWC formula below
+# is METER's generic mineral-soil equation for TEROS 10 and is a PLACEHOLDER:
+# AGRIA's living medium needs its own gravimetric calibration (Phase 1),
+# which the gateway records and which will replace this equation.
+sensor:
+  - platform: ads1115
+    ads1115_id: ${ads}
+    multiplexer: ${mux_a}
+    gain: 4.096
+    id: l${level}_ma_v
+    name: l${level}_moisture_a_mv
+    unit_of_measurement: mV
+    accuracy_decimals: 0
+    update_interval: 30s
+    filters:
+      - multiply: 1000
+  - platform: ads1115
+    ads1115_id: ${ads}
+    multiplexer: ${mux_b}
+    gain: 4.096
+    id: l${level}_mb_v
+    name: l${level}_moisture_b_mv
+    unit_of_measurement: mV
+    accuracy_decimals: 0
+    update_interval: 30s
+    filters:
+      - multiply: 1000
+  - platform: template
+    name: l${level}_moisture_a
+    unit_of_measurement: "% VWC"
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: |-
+      float mv = id(l${level}_ma_v).state;
+      if (isnan(mv)) return NAN;
+      return 100.0f * (4.824e-10f * mv * mv * mv - 2.278e-6f * mv * mv + 3.898e-3f * mv - 2.154f);
+  - platform: template
+    name: l${level}_moisture_b
+    unit_of_measurement: "% VWC"
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: |-
+      float mv = id(l${level}_mb_v).state;
+      if (isnan(mv)) return NAN;
+      return 100.0f * (4.824e-10f * mv * mv * mv - 2.278e-6f * mv * mv + 3.898e-3f * mv - 2.154f);
+
+  # Reference tray on four load cells. Set tare_raw (empty tray) and
+  # span_raw/span_kg (a known test weight) per level during commissioning.
+  - platform: hx711
+    name: l${level}_weight
+    dout_pin: ${hx_dout}
+    clk_pin: ${hx_clk}
+    gain: 128
+    update_interval: 30s
+    unit_of_measurement: kg
+    accuracy_decimals: 3
+    filters:
+      - median:
+          window_size: 5
+          send_every: 1
+      - calibrate_linear:
+          - ${tare_raw} -> 0
+          - ${span_raw} -> ${span_kg}
+
+  - platform: dallas_temp
+    name: l${level}_medium_temp
+    address: ${temp_addr}
+    accuracy_decimals: 2
+    update_interval: 30s

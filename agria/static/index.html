@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Agria Gateway</title>
+<title>AGRIA Gateway</title>
 <style>
 :root {
   --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
@@ -26,20 +26,21 @@ header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; bord
   background: var(--surface); position: sticky; top: 0; z-index: 2; flex-wrap: wrap; }
 header h1 { font-size: 17px; margin: 0; font-weight: 650; }
 header .meta { color: var(--ink-2); font-size: 13px; margin-left: auto; }
-main { max-width: 1280px; margin: 0 auto; padding: 16px; }
-h2 { font-size: 15px; margin: 24px 0 10px; font-weight: 650; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-h2 small { color: var(--ink-2); font-weight: 400; font-size: 13px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+main { max-width: 1320px; margin: 0 auto; padding: 16px; }
+h2 { font-size: 16px; margin: 28px 0 10px; font-weight: 650; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+h2 small, h3 small { color: var(--ink-2); font-weight: 400; font-size: 13px; }
+h3 { font-size: 14px; margin: 18px 0 8px; font-weight: 650; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
 .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
   cursor: pointer; display: flex; flex-direction: column; gap: 4px; min-width: 0; text-align: left; color: inherit; font: inherit; }
 .tile:hover { border-color: var(--axis); }
-.tile:focus-visible { outline: 2px solid var(--series); outline-offset: 2px; }
+.tile:focus-visible, .link:focus-visible { outline: 2px solid var(--series); outline-offset: 2px; }
 .tile .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
 .tile .name { color: var(--ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile .value { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.tile .value { font-size: 24px; font-weight: 600; }
 .tile .value small { font-size: 13px; color: var(--ink-2); font-weight: 400; margin-left: 3px; }
 .tile .foot { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; gap: 6px; }
-.tile svg { width: 100%; height: 44px; display: block; }
+svg.spark { width: 100%; height: 36px; display: block; }
 .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 2px 7px;
   border-radius: 999px; white-space: nowrap; }
 .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
@@ -47,32 +48,50 @@ h2 small { color: var(--ink-2); font-weight: 400; font-size: 13px; }
 .chip.warn { background: var(--warning); color: var(--on-warning); } .chip.warn::before { background: var(--on-warning); }
 .chip.alarm { background: var(--critical); color: #fff; } .chip.alarm::before { background: #fff; }
 .chip.nodata { color: var(--muted); } .chip.nodata::before { background: var(--muted); }
-.alerts { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 .alert { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
 .alert:first-child { border-top: 0; }
 .alert .msg { flex: 1 1 260px; min-width: 0; }
-.alert .when { color: var(--muted); font-size: 12px; }
+.when { color: var(--muted); font-size: 12px; }
 .empty { padding: 12px; color: var(--ink-2); }
 button.btn { font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--axis);
-  background: transparent; color: var(--ink); cursor: pointer; }
+  background: transparent; color: var(--ink); cursor: pointer; white-space: nowrap; }
 button.btn:hover { background: var(--band); }
 button.btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
-.nodes { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-.cams { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 10px; }
+button.btn.primary { background: var(--series); border-color: var(--series); color: #fff; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-weight: 600; color: var(--ink-2); font-size: 12px; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 8px 10px; border-top: 1px solid var(--border); vertical-align: top; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.link { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: inherit;
+  text-decoration: underline; text-decoration-color: var(--axis); text-underline-offset: 3px; }
+.crop b { font-weight: 600; }
+.sub { color: var(--muted); font-size: 12px; }
+.mini { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.mini .btn { padding: 2px 8px; font-size: 12px; }
+.moist { min-width: 170px; }
+.moist svg { width: 160px; height: 28px; display: block; margin-top: 4px; }
+.cams { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 10px; }
 .cams figure { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 .cams img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: cover; background: var(--grid); }
 .cams figcaption { padding: 6px 10px; font-size: 12.5px; color: var(--ink-2); }
 dialog { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink);
   width: min(900px, calc(100vw - 32px)); padding: 16px; }
+dialog.form { width: min(460px, calc(100vw - 32px)); }
 dialog::backdrop { background: rgba(0,0,0,0.35); }
+dialog h3 { margin: 0 0 4px; font-size: 16px; }
+label.f { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; font-size: 13px; color: var(--ink-2); }
+label.f input, label.f select, label.f textarea { font: inherit; font-size: 14px; padding: 7px 9px; border-radius: 6px;
+  border: 1px solid var(--axis); background: var(--page); color: var(--ink); }
+.hint { font-size: 12px; color: var(--muted); }
+.warnbox { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: var(--band); font-size: 12.5px; color: var(--ink-2); }
 .dhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
-.dhead h3 { margin: 0; font-size: 16px; }
-.ranges { display: flex; gap: 6px; }
 .chartwrap { position: relative; margin-top: 12px; }
 .chartwrap svg { width: 100%; height: 280px; display: block; }
 .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
   border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); white-space: nowrap; display: none; }
-.tip b { font-variant-numeric: tabular-nums; }
 .legend { display: flex; gap: 14px; color: var(--ink-2); font-size: 12px; margin-top: 6px; flex-wrap: wrap; }
 .legend span::before { content: ""; display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--series);
   vertical-align: middle; margin-right: 5px; }
@@ -84,28 +103,31 @@ dialog::backdrop { background: rgba(0,0,0,0.35); }
 </head>
 <body>
 <header>
-  <h1>Agria · Site gateway</h1>
+  <h1>AGRIA · Site gateway</h1>
   <span id="conn" class="chip nodata">connecting</span>
   <span class="meta" id="updated"></span>
 </header>
 <main>
   <h2>Active alerts <small id="alertcount"></small></h2>
-  <div class="alerts" id="alerts"><div class="empty">Loading…</div></div>
+  <div class="panel" id="alerts"><div class="empty">Loading…</div></div>
   <div id="sites"></div>
+  <div id="trial"></div>
 </main>
 
 <dialog id="detail" aria-labelledby="dtitle">
   <div class="dhead">
-    <div><h3 id="dtitle"></h3><div id="dsub" style="color:var(--ink-2);font-size:13px"></div></div>
-    <div class="ranges" role="group" aria-label="Time range">
+    <div><h3 id="dtitle"></h3><div id="dsub" class="sub"></div></div>
+    <div class="row" role="group" aria-label="Time range">
       <button class="btn" data-h="24">24 h</button><button class="btn" data-h="168">7 d</button>
-      <button class="btn" data-h="720">30 d</button><button class="btn" id="dclose" aria-label="Close">Close</button>
+      <button class="btn" data-h="720">30 d</button><button class="btn" id="dclose">Close</button>
     </div>
   </div>
   <div class="chartwrap"><svg id="dchart" role="img"></svg><div class="tip" id="tip"></div></div>
-  <div class="legend"><span>Mean</span><span class="lb">Target band (warning limits)</span><span class="ll">Alarm limits</span></div>
+  <div class="legend"><span>Mean</span><span class="lb">Warning limits (if set)</span><span class="ll">Alarm limits (if set)</span></div>
   <div class="cal" id="dcal"></div>
 </dialog>
+
+<dialog id="formdlg" class="form"><form method="dialog" id="formel"></form></dialog>
 
 <script>
 const $ = (s, el = document) => el.querySelector(s);
@@ -113,18 +135,18 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
                 set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 const STATUS = { ok: "OK", warn: "Warning", alarm: "Alarm", nodata: "No data" };
-const FLAG = { threshold: "out of range", stale: "stale", sensor_fault: "sensor fault", calibration: "calibration due", node_offline: "node offline" };
-let sites = [], current = null, hours = 24;
+const FLAG = { threshold: "out of range", stale: "stale", sensor_fault: "sensor fault", calibration: "calibration due",
+  node_offline: "node offline", valve_open_too_long: "valve stuck open", no_flow: "no flow",
+  flow_without_valve: "flow with valve shut", daily_volume: "over daily volume" };
+const ROOT_KINDS = new Set(["medium_moisture", "moisture_raw", "tray_weight", "medium_temperature", "medium_ec"]);
+let sites = [], meta = { irrigation_modes: [], stages: [], intervention_kinds: [] }, current = null, hours = 24;
+const sensorIndex = {};
 
-function fmt(v) {
+function fmt(v, d) {
   if (v == null) return "–";
+  if (d != null) return v.toFixed(d);
   const a = Math.abs(v);
   return a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : v.toFixed(2);
-}
-function show(s) {
-  if (s.value == null) return "–";
-  if (s.kind === "level_switch") return s.value >= 0.5 ? "Water OK" : "LOW";
-  return `${fmt(s.value)}<small>${esc(s.unit)}</small>`;
 }
 function ago(ts) {
   if (!ts) return "never";
@@ -135,7 +157,7 @@ function ago(ts) {
   return `${(s / 86400) | 0}d ago`;
 }
 const when = ts => new Date(ts * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-const chip = st => `<span class="chip ${st}">${STATUS[st] || st}</span>`;
+const chip = st => `<span class="chip ${st}">${STATUS[st] || esc(st)}</span>`;
 
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json" };
@@ -149,68 +171,170 @@ async function api(path, opts = {}) {
     headers.Authorization = `Bearer ${t}`;
     r = await fetch(path, { ...opts, headers });
   }
-  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+  if (!r.ok) { let m = await r.text(); try { m = JSON.parse(m).detail || m; } catch {} throw new Error(m); }
   return r.json();
 }
+const post = (path, body) => api(path, { method: "POST", body: JSON.stringify(body) });
 function who() {
   let n = store.get("agria-name");
-  if (!n) { n = prompt("Your name (recorded with acknowledgements and calibrations):"); if (n) store.set("agria-name", n); }
+  if (!n) { n = prompt("Your name (recorded with every change):"); if (n) store.set("agria-name", n); }
   return n;
 }
 
-// Sparkline: single series, target band shaded, no axes.
-function spark(points, th) {
-  if (!points.length) return `<svg viewBox="0 0 200 44" aria-hidden="true"></svg>`;
+// Generic form dialog. Resolves with field values, or null if cancelled.
+function form(title, fields, { note = "", submit = "Save" } = {}) {
+  const dlg = $("#formdlg"), el = $("#formel");
+  el.innerHTML = `<h3>${esc(title)}</h3>${note ? `<div class="warnbox">${note}</div>` : ""}` + fields.map(f => {
+    const id = `f-${f.name}`, req = f.required ? "required" : "";
+    let input;
+    if (f.type === "select") input = `<select id="${id}" name="${f.name}" ${req}>${f.options.map(o =>
+      `<option value="${esc(o.value ?? o)}" ${(o.value ?? o) === f.value ? "selected" : ""}>${esc(o.label ?? o)}</option>`).join("")}</select>`;
+    else if (f.type === "textarea") input = `<textarea id="${id}" name="${f.name}" rows="3" maxlength="1000">${esc(f.value || "")}</textarea>`;
+    else input = `<input id="${id}" name="${f.name}" type="${f.type || "text"}" ${req} ${f.step ? `step="${f.step}"` : ""} ${f.min != null ? `min="${f.min}"` : ""} value="${esc(f.value ?? "")}">`;
+    return `<label class="f" for="${id}">${esc(f.label)}${input}${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ""}</label>`;
+  }).join("") + `<div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">${esc(submit)}</button></div>`;
+  return new Promise(resolve => {
+    dlg.onclose = () => {
+      if (dlg.returnValue !== "ok") return resolve(null);
+      const out = {};
+      for (const f of fields) {
+        const v = el.elements[f.name].value.trim();
+        out[f.name] = v === "" ? null : f.type === "number" ? Number(v) : f.type === "date" ? Date.parse(v + "T12:00:00") / 1000 : v;
+      }
+      resolve(out);
+    };
+    dlg.returnValue = "";
+    dlg.showModal();
+  });
+}
+async function act(fn) { try { await fn(); await refresh(); } catch (e) { alert(e.message); } }
+
+function spark(points, th, cls = "spark", vb = [200, 36]) {
+  const [W, H] = vb;
+  if (!points.length) return `<svg class="${cls}" viewBox="0 0 ${W} ${H}" aria-hidden="true"></svg>`;
   const vals = points.map(p => p.mean);
   let lo = Math.min(...vals), hi = Math.max(...vals);
   if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
   const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
   const t0 = points[0].ts, t1 = points[points.length - 1].ts || t0 + 1;
-  const x = t => 2 + (t - t0) / Math.max(1, t1 - t0) * 196, y = v => 42 - (v - lo) / (hi - lo) * 40;
+  const x = t => 2 + (t - t0) / Math.max(1, t1 - t0) * (W - 4), y = v => H - 2 - (v - lo) / (hi - lo) * (H - 4);
   let band = "";
-  if (th.warn_low != null || th.warn_high != null) {
+  if (th && (th.warn_low != null || th.warn_high != null)) {
     const a = y(Math.min(hi, th.warn_high ?? hi)), b = y(Math.max(lo, th.warn_low ?? lo));
-    if (b > a) band = `<rect x="0" width="200" y="${a}" height="${b - a}" fill="var(--band)"/>`;
+    if (b > a) band = `<rect x="0" width="${W}" y="${a}" height="${b - a}" fill="var(--band)"/>`;
   }
   const d = points.length > 1 ? points.map((p, i) => `${i ? "L" : "M"}${x(p.ts).toFixed(1)},${y(p.mean).toFixed(1)}`).join("")
-    : `M2,${y(points[0].mean).toFixed(1)}L198,${y(points[0].mean).toFixed(1)}`;
-  return `<svg viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true">${band}
-    <path d="${d}" fill="none" stroke="var(--series)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+    : `M2,${y(points[0].mean).toFixed(1)}L${W - 2},${y(points[0].mean).toFixed(1)}`;
+  return `<svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${band}
+    <path d="${d}" fill="none" stroke="var(--series)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
 }
 
-async function loadSparks() {
-  for (const site of sites) for (const s of site.sensors) {
-    if (s.kind === "level_switch") continue;
-    const el = document.getElementById(`sp-${s.key}`);
-    if (!el) continue;
-    try {
-      const h = await api(`/api/readings/${s.key}?hours=24&points=96`);
-      el.innerHTML = spark(h.points, s.thresholds);
-    } catch {}
-  }
+function show(s) {
+  if (s.value == null) return "–";
+  if (s.kind === "leak") return s.value >= 0.5 ? "WET" : "Dry";
+  if (s.kind === "valve_state") return s.value >= 0.5 ? "Open" : "Closed";
+  return `${fmt(s.value)}<small>${esc(s.unit)}</small>`;
+}
+const val = s => s ? `<button class="link" data-key="${esc(s.key)}" title="${esc(s.name)}">${s.value == null ? "–" : fmt(s.value)}</button>` : "–";
+const worst = list => list.reduce((w, s) => ({ alarm: 3, warn: 2, ok: 1 }[s.status] > ({ alarm: 3, warn: 2, ok: 1 }[w] || 0) ? s.status : w), "ok");
+
+function tile(s) {
+  const st = s.value == null ? "nodata" : s.status;
+  return `<button class="tile" data-key="${esc(s.key)}" aria-label="${esc(s.name)} details">
+    <div class="top"><span class="name">${esc(s.name)}</span>${chip(st)}</div>
+    <div class="value">${show(s)}</div>
+    ${s.binary ? "" : `<div data-spark="${esc(s.key)}">${spark([], null)}</div>`}
+    <div class="foot"><span>${esc(s.flags.map(f => FLAG[f] || f).join(", "))}</span><span>${s.ts ? ago(s.ts) : "no data"}</span></div>
+  </button>`;
+}
+
+function cropCell(site, rack, l) {
+  const c = l.cycle;
+  if (!c) return `<span class="sub">Empty</span><div class="mini"><button class="btn" data-act="start" data-site="${site.id}" data-rack="${rack.id}" data-level="${l.level}">Start cycle</button></div>`;
+  const day = Math.floor((Date.now() / 1000 - c.start_ts) / 86400);
+  return `<div class="crop"><b>${esc(c.variety)}</b> · ${esc(c.stage || "")} · day ${day}</div>
+    <div class="sub">${esc(c.irrigation_mode)} arm${c.batch_id ? ` · batch ${esc(c.batch_id)}` : ""}</div>
+    <div class="mini"><button class="btn" data-act="stage" data-cycle="${c.id}">Stage</button><button class="btn" data-act="log" data-cycle="${c.id}">Log</button><button class="btn" data-act="harvest" data-cycle="${c.id}">Harvest</button></div>`;
+}
+
+function rackTable(site, rack) {
+  const rows = rack.levels.map(l => {
+    const S = k => l.sensors[k] || [];
+    const m = S("medium_moisture"), w = S("tray_weight")[0], t = S("medium_temperature")[0], irr = l.irrigation;
+    const flags = [...new Set([...Object.values(l.sensors).flat().flatMap(s => s.flags), ...l.irrigation_flags])].map(f => FLAG[f] || f);
+    const ev = irr && irr.last_event;
+    return `<tr>
+      <td><b>L${l.level}</b></td>
+      <td>${cropCell(site, rack, l)}</td>
+      <td class="moist">${m.map(s => val(s)).join(" / ")} <span class="sub">% VWC</span>
+        ${m[0] ? `<div data-spark="${esc(m[0].key)}" data-mini="1">${spark([], null, "", [160, 28])}</div>` : ""}</td>
+      <td class="num">${val(w)}</td>
+      <td class="num">${val(t)}</td>
+      <td>${irr ? (irr.open ? `<b>Open</b> · ${fmt(irr.flow_lpm)} L/min` : "Closed") : "–"}</td>
+      <td>${ev ? `${ago(ev.end_ts)}<div class="sub">${fmt(ev.liters)} L · ${Math.round(ev.end_ts - ev.start_ts)} s</div>` : '<span class="sub">none yet</span>'}</td>
+      <td class="num">${irr ? fmt(irr.liters_today) : "–"}</td>
+      <td>${chip(l.status)}${flags.length ? `<div class="sub">${esc(flags.join(", "))}</div>` : ""}</td>
+    </tr>`;
+  }).join("");
+  const rs = rack.sensors.map(s => `<button class="link" data-key="${esc(s.key)}">${esc(s.name)}: ${s.kind === "leak" ? (s.value >= 0.5 ? "<b class='err'>WET</b>" : "Dry") : `${fmt(s.value)} ${esc(s.unit)}`}</button>`).join(" · ");
+  return `<h3>${esc(rack.name)} <small>${rack.levels.length} levels</small>
+      <button class="btn" data-act="export" data-site="${site.id}" data-rack="${rack.id}">Export 7 days (CSV)</button>
+      <button class="btn" data-act="batch">Register medium batch</button></h3>
+    <div class="sub" style="margin-bottom:8px">${rs}</div>
+    <div class="panel scroll"><table>
+      <thead><tr><th>Level</th><th>Crop cycle</th><th>Moisture A / B</th><th class="num">Tray (kg)</th><th class="num">Medium (°C)</th><th>Valve</th><th>Last watering</th><th class="num">Today (L)</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
 }
 
 function renderSites() {
-  const wrap = $("#sites");
-  wrap.innerHTML = sites.map(site => `
-    <h2>${esc(site.name)} <small>${esc(site.type)} · ${esc(site.timezone)}</small></h2>
-    <div class="nodes">${site.nodes.map(n => `<span class="chip ${n.status === "online" ? "ok" : n.status === "offline" ? "alarm" : "nodata"}"
+  for (const k in sensorIndex) delete sensorIndex[k];
+  for (const site of sites) {
+    for (const s of site.sensors) sensorIndex[s.key] = [site, s];
+    for (const r of site.racks) { for (const s of r.sensors) sensorIndex[s.key] = [site, s];
+      for (const l of r.levels) for (const list of Object.values(l.sensors)) for (const s of list) sensorIndex[s.key] = [site, s]; }
+  }
+  $("#sites").innerHTML = sites.map(site => `
+    <h2>${esc(site.name)} <small>${esc(site.type)}</small></h2>
+    <div class="row" style="margin-bottom:10px">${site.nodes.map(n => `<span class="chip ${n.status === "online" ? "ok" : n.status === "offline" ? "alarm" : "nodata"}"
         title="${esc(n.description || "")}">${esc(n.id)}: ${esc(n.status)}</span>`).join("")}</div>
-    <div class="grid">${site.sensors.map(s => {
-      const st = s.value == null ? "nodata" : s.status;
-      const flags = s.flags.map(f => FLAG[f] || f).join(", ");
-      return `<button class="tile" data-key="${esc(s.key)}" aria-label="${esc(s.name)} details">
-        <div class="top"><span class="name">${esc(s.name)}</span>${chip(st)}</div>
-        <div class="value">${show(s)}</div>
-        <div id="sp-${esc(s.key)}">${s.kind === "level_switch" ? "" : spark([], {})}</div>
-        <div class="foot"><span>${esc(flags)}</span><span>${s.ts ? ago(s.ts) : "no data"}</span></div>
-      </button>`;
-    }).join("")}</div>
+    <div class="grid">${site.sensors.map(tile).join("")}</div>
+    ${site.racks.map(r => rackTable(site, r)).join("")}
+    <div id="events-${esc(site.id)}"></div>
     ${site.cameras.length ? `<div class="cams">${site.cameras.map(c => `<figure>
         <img alt="Latest image from ${esc(c.name)}" src="/api/cameras/${esc(site.id)}/${esc(c.id)}/latest?t=${Date.now()}" onerror="this.style.visibility='hidden'">
         <figcaption>${esc(c.name)}</figcaption></figure>`).join("")}</div>` : ""}
   `).join("");
-  wrap.querySelectorAll(".tile").forEach(t => t.addEventListener("click", () => openDetail(t.dataset.key)));
+}
+
+async function loadSparks() {
+  for (const el of document.querySelectorAll("[data-spark]")) {
+    const key = el.dataset.spark, s = sensorIndex[key] && sensorIndex[key][1];
+    try {
+      const h = await api(`/api/readings/${key}?hours=24&points=96`);
+      el.innerHTML = el.dataset.mini ? spark(h.points, s && s.thresholds, "", [160, 28]) : spark(h.points, s && s.thresholds);
+    } catch {}
+  }
+}
+
+async function renderEvents() {
+  for (const site of sites) {
+    const el = document.getElementById(`events-${site.id}`);
+    if (!el || !site.racks.length) continue;
+    const ev = await api(`/api/irrigation/events?site=${encodeURIComponent(site.id)}&hours=24&limit=50`);
+    el.innerHTML = `<h3>Watering events, last 24 h <small>${ev.length} events · ${fmt(ev.reduce((a, e) => a + e.liters, 0))} L</small></h3>
+      ${ev.length ? `<div class="panel scroll"><table><thead><tr><th>Ended</th><th>Rack</th><th>Level</th><th class="num">Liters</th><th class="num">Seconds</th><th>Measured by</th></tr></thead><tbody>
+      ${ev.map(e => `<tr><td>${when(e.end_ts)}</td><td>${esc(e.rack)}</td><td>L${e.level}</td><td class="num">${fmt(e.liters)}</td><td class="num">${Math.round(e.end_ts - e.start_ts)}</td><td>${e.source === "meter" ? "meter total" : "flow integral"}</td></tr>`).join("")}
+      </tbody></table></div>` : `<div class="panel empty">No watering recorded in the last 24 hours.</div>`}`;
+  }
+}
+
+async function renderTrial() {
+  const rows = await api("/api/trial/summary");
+  $("#trial").innerHTML = `<h2>Irrigation trial <small>completed cycles by arm</small></h2>` + (rows.length
+    ? `<div class="panel scroll"><table><thead><tr><th>Variety</th><th>Arm</th><th class="num">Cycles</th><th class="num">Mean yield (g)</th><th class="num">Water (L/kg)</th><th class="num">Interventions / cycle</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${esc(r.variety)}</td><td>${esc(r.irrigation_mode)}</td><td class="num">${r.cycles}</td><td class="num">${fmt(r.mean_yield_g, 0)}</td><td class="num">${r.mean_liters_per_kg == null ? "–" : fmt(r.mean_liters_per_kg, 1)}</td><td class="num">${fmt(r.mean_interventions, 1)}</td></tr>`).join("")}
+      </tbody></table></div>`
+    : `<div class="panel empty">No harvested cycles yet. Start a cycle on a rack level, log its stages, and record the harvest weight to populate this comparison.</div>`);
 }
 
 async function renderAlerts() {
@@ -218,15 +342,10 @@ async function renderAlerts() {
   list.sort((a, b) => (b.severity === "alarm") - (a.severity === "alarm") || b.raised_ts - a.raised_ts);
   $("#alertcount").textContent = list.length ? `${list.length} open` : "";
   $("#alerts").innerHTML = list.length ? list.map(a => `<div class="alert">
-      ${chip(a.severity)}<div class="msg">${esc(a.message)}<div class="when">${esc(a.kind.replace("_", " "))} · raised ${when(a.raised_ts)}
+      ${chip(a.severity)}<div class="msg">${esc(a.message)}<div class="when">${esc(FLAG[a.kind] || a.kind.replace(/_/g, " "))} · raised ${when(a.raised_ts)}
       ${a.acked_ts ? ` · acknowledged by ${esc(a.acked_by)}` : ""}</div></div>
       ${a.acked_ts ? "" : `<button class="btn" data-ack="${a.id}">Acknowledge</button>`}</div>`).join("")
     : `<div class="empty">No open alerts.</div>`;
-  $("#alerts").querySelectorAll("[data-ack]").forEach(b => b.addEventListener("click", async () => {
-    const by = who(); if (!by) return;
-    try { await api(`/api/alerts/${b.dataset.ack}/ack`, { method: "POST", body: JSON.stringify({ by }) }); renderAlerts(); }
-    catch (e) { alert(`Could not acknowledge: ${e.message}`); }
-  }));
 }
 
 async function refresh() {
@@ -237,7 +356,7 @@ async function refresh() {
     c.className = `chip ${health.mqtt_connected ? "ok" : "alarm"}`;
     c.textContent = health.mqtt_connected ? "MQTT connected" : "MQTT disconnected";
     renderSites();
-    await renderAlerts();
+    await Promise.all([renderAlerts(), renderEvents(), renderTrial()]);
     $("#updated").textContent = `Updated ${new Date().toLocaleTimeString()}`;
     loadSparks();
   } catch (e) {
@@ -245,41 +364,79 @@ async function refresh() {
   }
 }
 
-// Detail chart with crosshair tooltip.
-function findSensor(key) { for (const s of sites) for (const x of s.sensors) if (x.key === key) return [s, x]; return []; }
+// One click handler for everything rendered dynamically.
+document.addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-key],[data-act],[data-ack]");
+  if (!b) return;
+  if (b.dataset.ack) { const by = who(); if (by) act(() => post(`/api/alerts/${b.dataset.ack}/ack`, { by })); return; }
+  if (b.dataset.key) { openDetail(b.dataset.key); return; }
+  const a = b.dataset.act, by = () => who();
+  if (a === "export") { location.href = `/api/export.csv?site=${encodeURIComponent(b.dataset.site)}&rack=${encodeURIComponent(b.dataset.rack)}&hours=168`; return; }
+  if (a === "batch") {
+    const v = await form("Register medium batch", [
+      { name: "id", label: "Batch ID", required: true, hint: "As printed on the batch label, e.g. B-2026-014" },
+      { name: "received_ts", label: "Date received", type: "date" },
+      { name: "notes", label: "Notes", type: "textarea", hint: "Handling and condition only" }],
+      { note: "Enter an ID only. Do not record formulation, ingredient ratios or inoculant details here; those stay in the restricted system." });
+    if (v) act(() => post("/api/batches", { ...v, by: by() }));
+  } else if (a === "start") {
+    const batches = await api("/api/batches");
+    const v = await form(`Start cycle · ${b.dataset.rack} level ${b.dataset.level}`, [
+      { name: "variety", label: "Variety", required: true },
+      { name: "irrigation_mode", label: "Irrigation arm", type: "select", options: meta.irrigation_modes, value: "timer",
+        hint: "Trial arms: timer = current schedule, sensor = sensor-guided rules (Phase 2)" },
+      { name: "batch_id", label: "Medium batch", type: "select", options: [{ value: "", label: "Not recorded" }, ...batches.map(x => x.id)] },
+      { name: "inoculation_ts", label: "Inoculation date", type: "date" },
+      { name: "notes", label: "Notes", type: "textarea" }], { submit: "Start" });
+    if (v) act(() => post("/api/cycles", { ...v, site: b.dataset.site, rack: b.dataset.rack, level: Number(b.dataset.level), by: by() }));
+  } else if (a === "stage") {
+    const v = await form("Set growth stage", [{ name: "stage", label: "Stage", type: "select", options: meta.stages }]);
+    if (v) act(() => post(`/api/cycles/${b.dataset.cycle}/stage`, { ...v, by: by() }));
+  } else if (a === "log") {
+    const v = await form("Log intervention or observation", [
+      { name: "kind", label: "Type", type: "select", options: meta.intervention_kinds.filter(k => k !== "stage") },
+      { name: "notes", label: "Notes", type: "textarea" }]);
+    if (v) act(() => post(`/api/cycles/${b.dataset.cycle}/interventions`, { ...v, by: by() }));
+  } else if (a === "harvest") {
+    const v = await form("Record harvest", [
+      { name: "yield_g", label: "Harvested weight (g)", type: "number", required: true, step: "1", min: 0 },
+      { name: "notes", label: "Notes", type: "textarea", hint: "Quality, losses, anything unusual" }], { submit: "Record harvest" });
+    if (v) act(() => post(`/api/cycles/${b.dataset.cycle}/harvest`, { ...v, by: by() }));
+  }
+});
 
+// Detail chart with crosshair tooltip and calibration log.
 async function openDetail(key) {
+  const hit = sensorIndex[key];
+  if (!hit) return;
   current = key;
-  const [site, s] = findSensor(key);
+  const [site, s] = hit;
   $("#dtitle").textContent = `${site.name} · ${s.name}`;
-  $("#dsub").textContent = `${fmt(s.value)} ${s.unit} · ${STATUS[s.value == null ? "nodata" : s.status]} · ${s.ts ? ago(s.ts) : "no data"} · ${s.key}`;
+  $("#dsub").innerHTML = `${show(s).replace(/<[^>]+>/g, " ")} · ${STATUS[s.value == null ? "nodata" : s.status]} · ${s.ts ? ago(s.ts) : "no data"} · ${esc(s.key)}`;
   renderCal(s);
   if (!$("#detail").open) $("#detail").showModal();
   drawDetail();
 }
 
 function renderCal(s) {
-  const el = $("#dcal");
-  if (!s.calibration) { el.style.display = "none"; return; }
+  const el = $("#dcal"), c = s.calibration;
+  if (!c.interval_days && !ROOT_KINDS.has(s.kind)) { el.style.display = "none"; return; }
   el.style.display = "";
-  const c = s.calibration, now = Date.now() / 1000;
+  const now = Date.now() / 1000;
   const status = !c.last_ts ? "No calibration on record."
-    : c.due_ts < now ? `Calibration overdue since ${when(c.due_ts)} (last ${when(c.last_ts)}).`
-    : `Last calibrated ${when(c.last_ts)}; next due ${when(c.due_ts)}.`;
-  el.innerHTML = `<span>${esc(status)} Interval ${c.interval_days} days.</span><button class="btn" id="logcal">Log calibration done now</button>`;
+    : c.due_ts && c.due_ts < now ? `Calibration overdue since ${when(c.due_ts)} (last ${when(c.last_ts)}).`
+    : `Last calibrated ${when(c.last_ts)}${c.last_notes ? ` (${c.last_notes})` : ""}.`;
+  el.innerHTML = `<span>${esc(status)}</span><button class="btn" id="logcal">Log calibration</button>`;
   $("#logcal").addEventListener("click", async () => {
-    const by = who(); if (!by) return;
-    const notes = prompt("Notes (buffer/standard used, slope/offset, anything odd):") || "";
-    try {
-      await api("/api/calibrations", { method: "POST", body: JSON.stringify({ sensor_key: s.key, by, notes }) });
-      await refresh(); openDetail(s.key);
-    } catch (e) { alert(`Could not save: ${e.message}`); }
+    const v = await form("Log calibration", [{ name: "notes", label: "Method and result", type: "textarea", required: true,
+      hint: "e.g. gravimetric against L3 tray weight, batch B-2026-014, slope/offset" }]);
+    if (v) { try { await post("/api/calibrations", { sensor_key: s.key, by: who(), notes: v.notes }); await refresh(); openDetail(s.key); } catch (e) { alert(e.message); } }
   });
 }
 
 async function drawDetail() {
-  document.querySelectorAll(".ranges [data-h]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.h === hours)));
-  const [, s] = findSensor(current);
+  document.querySelectorAll("#detail [data-h]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.h === hours)));
+  const [, s] = sensorIndex[current];
   const svg = $("#dchart"), tip = $("#tip");
   const { points } = await api(`/api/readings/${current}?hours=${hours}&points=400`);
   const W = svg.clientWidth || 860, H = 280, L = 48, R = 12, T = 10, B = 26;
@@ -310,18 +467,18 @@ async function drawDetail() {
   for (const k of ["alarm_low", "alarm_high"]) if (th[k] != null && th[k] > lo && th[k] < hi)
     g += `<line x1="${L}" x2="${W - R}" y1="${y(th[k])}" y2="${y(th[k])}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
   g += `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="var(--axis)"/>`;
-  // Break the line across gaps longer than 3 buckets so outages are visible.
   const gap = points.length > 1 ? 3 * (points[1].ts - points[0].ts || 1) : Infinity;
   const d = points.map((p, i) => `${i && p.ts - points[i - 1].ts <= Math.max(gap, 1) ? "L" : "M"}${x(p.ts).toFixed(1)},${y(p.mean).toFixed(1)}`).join("");
+  const lp = points[points.length - 1];
   g += `<path d="${d}" fill="none" stroke="var(--series)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="${x(points[points.length - 1].ts)}" cy="${y(points[points.length - 1].mean)}" r="4" fill="var(--series)" stroke="var(--surface)" stroke-width="2"/>
+    <circle cx="${x(lp.ts)}" cy="${y(lp.mean)}" r="4" fill="var(--series)" stroke="var(--surface)" stroke-width="2"/>
     <line id="xh" y1="${T}" y2="${H - B}" stroke="var(--axis)" visibility="hidden"/>
     <circle id="dot" r="4" fill="var(--series)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
     <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="hit"/>`;
   svg.innerHTML = g;
   const xh = $("#xh", svg), dot = $("#dot", svg);
-  $("#hit", svg).addEventListener("pointermove", ev => {
-    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+  $("#hit", svg).addEventListener("pointermove", e => {
+    const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) * W / r.width;
     const t = start + (px - L) / (W - L - R) * (end - start);
     let best = points[0];
     for (const p of points) if (Math.abs(p.ts - t) < Math.abs(best.ts - t)) best = p;
@@ -330,8 +487,7 @@ async function drawDetail() {
     dot.setAttribute("cx", cx); dot.setAttribute("cy", cy); dot.setAttribute("visibility", "visible");
     tip.style.display = "block";
     tip.innerHTML = `${when(best.ts)}<br>Mean <b>${fmt(best.mean)} ${esc(s.unit)}</b><br>Range ${fmt(best.min)}–${fmt(best.max)}`;
-    const left = cx * r.width / W;
-    tip.style.left = `${Math.min(left + 12, r.width - tip.offsetWidth - 4)}px`;
+    tip.style.left = `${Math.min(cx * r.width / W + 12, r.width - tip.offsetWidth - 4)}px`;
     tip.style.top = `${Math.max(0, cy * r.height / H - 30)}px`;
   });
   $("#hit", svg).addEventListener("pointerleave", () => {
@@ -339,12 +495,13 @@ async function drawDetail() {
   });
 }
 
-document.querySelectorAll(".ranges [data-h]").forEach(b => b.addEventListener("click", () => { hours = +b.dataset.h; drawDetail(); }));
+document.querySelectorAll("#detail [data-h]").forEach(b => b.addEventListener("click", () => { hours = +b.dataset.h; drawDetail(); }));
 $("#dclose").addEventListener("click", () => $("#detail").close());
 $("#detail").addEventListener("close", () => { current = null; });
 
+api("/api/meta").then(m => { meta = m; }).catch(() => {});
 refresh();
-setInterval(() => { if (!current) refresh(); }, 15000);
+setInterval(() => { if (!current && !$("#formdlg").open) refresh(); }, 15000);
 </script>
 </body>
 </html>

@@ -1,74 +1,79 @@
-# Agria site configuration.
+# AGRIA site configuration.
 #
-# Sensor ids must match the ESPHome sensor names (firmware/esphome). Each
-# sensor's `kind` supplies default units, plausible range, alert thresholds,
-# stale timeout and calibration interval (see agria/config.py, KINDS).
-# Override any of them per sensor. Defaults assume leafy greens/herbs in
-# hydroponics; tune thresholds to the crop actually being grown.
+# AGRIA grows in a biologically active, soil-based medium about 2 in deep on
+# six-level racks. Root-zone sensors here ship with NO moisture thresholds on
+# purpose: limits come from the approved Growing Medium Characterization
+# Specification (Phase 0) and get added per sensor once it exists, e.g.
+#     thresholds: {warn_low: <spec value>, alarm_low: <spec value>}
+#
+# Sensor ids must match the ESPHome sensor names (firmware/esphome).
+# `per_level` repeats sensors for every rack level; {level} becomes 1..6.
+# Irrigation zones are derived from each rack's water_node, which must
+# publish l<N>_valve and l<N>_flow (and optionally l<N>_volume) per level.
 
 sites:
-  - id: greenhouse-1
-    name: Greenhouse 1
-    type: greenhouse
-    timezone: America/New_York
-    nodes:
-      - id: gh1-climate
-        description: Canopy climate node (aspirated radiation shield, canopy height)
-        sensors:
-          - {id: air_temp, kind: air_temperature, name: Air temperature}
-          - {id: rh, kind: relative_humidity, name: Relative humidity}
-          - {id: co2, kind: co2, name: CO2}
-          - {id: ppfd, kind: ppfd, name: Light (PPFD)}
-          - {id: wifi_rssi, kind: wifi_rssi, name: Climate node WiFi}
-      - id: gh1-nutrient
-        description: Reservoir / nutrient node
-        sensors:
-          - {id: water_temp, kind: water_temperature, name: Water temperature}
-          - {id: ph, kind: ph, name: pH}
-          - {id: ec, kind: ec, name: EC}
-          - {id: do, kind: dissolved_oxygen, name: Dissolved oxygen}
-          - {id: tank_level, kind: tank_level, name: Reservoir level}
-          - {id: tank_low, kind: level_switch, name: Reservoir low float}
-          - {id: wifi_rssi, kind: wifi_rssi, name: Nutrient node WiFi}
-    derived:
-      - id: vpd
-        kind: vpd
-        name: VPD
-        inputs: {temperature: gh1-climate/air_temp, humidity: gh1-climate/rh}
-      - id: dli
-        kind: dli
-        name: Daily light integral
-        inputs: {ppfd: gh1-climate/ppfd}
-    cameras: []
-    # cameras:
-    #   - id: bench-a
-    #     name: Bench A overhead
-    #     snapshot_url: http://192.168.50.31/snapshot.jpg
-    #     interval_s: 900
-
   - id: container-1
     name: Container 1
     type: container
     timezone: America/New_York
+    racks:
+      - id: rack-a
+        name: Rack A (pilot)
+        levels: 6
+        water_node: rack-a-water
+        irrigation:
+          # Delivery-safety limits, not watering targets. Tune to the real plumbing.
+          max_open_s: 900
+          no_flow_after_s: 45
+          min_flow_lpm: 0.1
+          leak_flow_lpm: 0.2
+          flow_without_valve_s: 60
+          # daily_volume_cap_l: set after the Phase 1 baseline shows normal use
     nodes:
       - id: c1-climate
-        description: Canopy climate node
+        description: Room climate at mid-rack canopy height
         sensors:
           - {id: air_temp, kind: air_temperature, name: Air temperature}
           - {id: rh, kind: relative_humidity, name: Relative humidity}
           - {id: co2, kind: co2, name: CO2}
-          - {id: ppfd, kind: ppfd, name: Light (PPFD)}
+          - {id: ppfd, kind: ppfd, name: Light (PPFD), rack: rack-a}
           - {id: wifi_rssi, kind: wifi_rssi, name: Climate node WiFi}
-      - id: c1-nutrient
-        description: Reservoir / nutrient node
+
+      - id: rack-a-levels
+        description: Pilot rack root zone, all six levels
         sensors:
-          - {id: water_temp, kind: water_temperature, name: Water temperature}
-          - {id: ph, kind: ph, name: pH}
-          - {id: ec, kind: ec, name: EC}
-          - {id: do, kind: dissolved_oxygen, name: Dissolved oxygen}
-          - {id: tank_level, kind: tank_level, name: Reservoir level}
-          - {id: tank_low, kind: level_switch, name: Reservoir low float}
-          - {id: wifi_rssi, kind: wifi_rssi, name: Nutrient node WiFi}
+          - {id: air_temp_top, kind: air_temperature, name: "Air temp, top of rack", rack: rack-a}
+          - {id: rh_top, kind: relative_humidity, name: "RH, top of rack", rack: rack-a}
+          - {id: air_temp_bottom, kind: air_temperature, name: "Air temp, bottom of rack", rack: rack-a}
+          - {id: rh_bottom, kind: relative_humidity, name: "RH, bottom of rack", rack: rack-a}
+          - {id: wifi_rssi, kind: wifi_rssi, name: Levels node WiFi}
+        per_level:
+          rack: rack-a
+          levels: [1, 2, 3, 4, 5, 6]
+          sensors:
+            # Two moisture sensors per level. During Phase 1 these can be two
+            # different sensor types, compared against tray weight.
+            - {id: "l{level}_moisture_a", kind: medium_moisture, name: "L{level} moisture A"}
+            - {id: "l{level}_moisture_b", kind: medium_moisture, name: "L{level} moisture B"}
+            - {id: "l{level}_moisture_a_mv", kind: moisture_raw, name: "L{level} moisture A raw"}
+            - {id: "l{level}_moisture_b_mv", kind: moisture_raw, name: "L{level} moisture B raw"}
+            - {id: "l{level}_weight", kind: tray_weight, name: "L{level} reference tray weight"}
+            - {id: "l{level}_medium_temp", kind: medium_temperature, name: "L{level} medium temperature"}
+
+      - id: rack-a-water
+        description: Pilot rack water delivery, leaks and pump
+        sensors:
+          - {id: leak_floor, kind: leak, name: Leak under rack, rack: rack-a}
+          - {id: leak_supply, kind: leak, name: Leak at supply manifold, rack: rack-a}
+          - {id: pump_current, kind: pump_current, name: Supply pump current, rack: rack-a}
+          - {id: wifi_rssi, kind: wifi_rssi, name: Water node WiFi}
+        per_level:
+          rack: rack-a
+          levels: [1, 2, 3, 4, 5, 6]
+          sensors:
+            - {id: "l{level}_valve", kind: valve_state, name: "L{level} valve"}
+            - {id: "l{level}_flow", kind: water_flow, name: "L{level} flow"}
+            - {id: "l{level}_volume", kind: water_volume, name: "L{level} meter total"}
     derived:
       - id: vpd
         kind: vpd
@@ -79,6 +84,34 @@ sites:
         name: Daily light integral
         inputs: {ppfd: c1-climate/ppfd}
     cameras: []
+    # One fixed camera per level; same framing every capture.
+    # cameras:
+    #   - {id: rack-a-l1, name: Rack A level 1, rack: rack-a, level: 1,
+    #      snapshot_url: "http://192.168.50.41/snapshot.jpg", interval_s: 900}
+
+  - id: greenhouse-1
+    name: Greenhouse 1
+    type: greenhouse
+    timezone: America/New_York
+    # Racks are added here in Phase 3 using the package proven on rack-a.
+    nodes:
+      - id: gh1-climate
+        description: Canopy climate node (aspirated radiation shield, canopy height)
+        sensors:
+          - {id: air_temp, kind: air_temperature, name: Air temperature}
+          - {id: rh, kind: relative_humidity, name: Relative humidity}
+          - {id: co2, kind: co2, name: CO2}
+          - {id: ppfd, kind: ppfd, name: Light (PPFD)}
+          - {id: wifi_rssi, kind: wifi_rssi, name: Climate node WiFi}
+    derived:
+      - id: vpd
+        kind: vpd
+        name: VPD
+        inputs: {temperature: gh1-climate/air_temp, humidity: gh1-climate/rh}
+      - id: dli
+        kind: dli
+        name: Daily light integral
+        inputs: {ppfd: gh1-climate/ppfd}
 
 notify:
   # Free phone push: install the ntfy app, subscribe to a hard-to-guess topic.
@@ -87,4 +120,5 @@ notify:
   min_severity: warn
 
 retention:
-  raw_days: 90
+  # Trial data feeds Phase 4 models; keep a full year at full resolution.
+  raw_days: 365

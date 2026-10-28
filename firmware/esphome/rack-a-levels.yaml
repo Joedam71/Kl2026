@@ -1,0 +1,85 @@
+substitutions:
+  site: container-1
+  node: rack-a-levels
+
+packages:
+  base: !include common/base.yaml
+  rack: !include common/rack_levels.yaml
+  level1: !include
+    file: common/rack_level.yaml
+    vars:
+      level: 1
+      ads: ads_1
+      mux_a: A0_GND
+      mux_b: A1_GND
+      hx_dout: GPIO34
+      hx_clk: GPIO13
+      tare_raw: "0"        # commissioning: raw reading with the empty tray
+      span_raw: "100000"   # commissioning: raw reading with the test weight
+      span_kg: "10.0"      # commissioning: the test weight in kg
+      temp_addr: "0x0000000000000001"  # commissioning: this probe's 1-Wire address (see node log)
+  level2: !include
+    file: common/rack_level.yaml
+    vars:
+      level: 2
+      ads: ads_1
+      mux_a: A2_GND
+      mux_b: A3_GND
+      hx_dout: GPIO35
+      hx_clk: GPIO14
+      tare_raw: "0"        # commissioning: raw reading with the empty tray
+      span_raw: "100000"   # commissioning: raw reading with the test weight
+      span_kg: "10.0"      # commissioning: the test weight in kg
+      temp_addr: "0x0000000000000002"  # commissioning: this probe's 1-Wire address (see node log)
+  level3: !include
+    file: common/rack_level.yaml
+    vars:
+      level: 3
+      ads: ads_2
+      mux_a: A0_GND
+      mux_b: A1_GND
+      hx_dout: GPIO36
+      hx_clk: GPIO16
+      tare_raw: "0"        # commissioning: raw reading with the empty tray
+      span_raw: "100000"   # commissioning: raw reading with the test weight
+      span_kg: "10.0"      # commissioning: the test weight in kg
+      temp_addr: "0x0000000000000003"  # commissioning: this probe's 1-Wire address (see node log)
+  level4: !include
+    file: common/rack_level.yaml
+    vars:
+      level: 4
+      ads: ads_2
+      mux_a: A2_GND
+      mux_b: A3_GND
+      hx_dout: GPIO39
+      hx_clk: GPIO17
+      tare_raw: "0"        # commissioning: raw reading with the empty tray
+      span_raw: "100000"   # commissioning: raw reading with the test weight
+      span_kg: "10.0"      # commissioning: the test weight in kg
+      temp_addr: "0x0000000000000004"  # commissioning: this probe's 1-Wire address (see node log)
+  level5: !include
+    file: common/rack_level.yaml
+    vars:
+      level: 5
+      ads: ads_3
+      mux_a: A0_GND
+      mux_b: A1_GND
+      hx_dout: GPIO32
+      hx_clk: GPIO18
+      tare_raw: "0"        # commissioning: raw reading with the empty tray
+      span_raw: "100000"   # commissioning: raw reading with the test weight
+      span_kg: "10.0"      # commissioning: the test weight in kg
+      temp_addr: "0x0000000000000005"  # commissioning: this probe's 1-Wire address (see node log)
+  level6: !include
+    file: common/rack_level.yaml
+    vars:
+      level: 6
+      ads: ads_3
+      mux_a: A2_GND
+      mux_b: A3_GND
+      hx_dout: GPIO33
+      hx_clk: GPIO19
+      tare_raw: "0"        # commissioning: raw reading with the empty tray
+      span_raw: "100000"   # commissioning: raw reading with the test weight
+      span_kg: "10.0"      # commissioning: the test weight in kg
+      temp_addr: "0x0000000000000006"  # commissioning: this probe's 1-Wire address (see node log)
